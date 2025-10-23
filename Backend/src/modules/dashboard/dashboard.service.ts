@@ -47,6 +47,26 @@ export class DashboardService {
     const daysInWeek = new Date().getDay() + 1;
     const avgDaily = daysInWeek > 0 ? totalLitersWeek / daysInWeek : 0;
 
+    // Production by day of week (last 7 days)
+    const dailyProduction = [];
+    const currentDate = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      const dayMilkings = weekMilkings?.filter(m => m.milking_date === dateStr) || [];
+      const dayTotal = dayMilkings.reduce((sum, m) => sum + parseFloat(m.total_liters), 0);
+
+      dailyProduction.push({
+        date: dateStr,
+        dayName: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][date.getDay()],
+        totalLiters: parseFloat(dayTotal.toFixed(2)),
+        milkingsCount: dayMilkings.length,
+      });
+    }
+
     // Top producers
     const { data: topProducers } = await supabase
       .from('cows')
@@ -77,6 +97,7 @@ export class DashboardService {
         totalLiters: parseFloat(totalLitersWeek.toFixed(2)),
         avgDaily: parseFloat(avgDaily.toFixed(2)),
         trend: 'stable',
+        dailyProduction, // Array with production for each day
       },
       topProducers: topProducers || [],
       recentMilkings: recentMilkings || [],

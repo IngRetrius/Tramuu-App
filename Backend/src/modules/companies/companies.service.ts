@@ -13,17 +13,31 @@ export class CompaniesService {
 
     const supabase = this.supabaseService.getClient();
 
-    const { data: company, error } = await supabase
+    // Get company with user email
+    const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('*')
+      .select('*, users(email)')
       .eq('user_id', userId)
       .single();
 
-    if (error || !company) {
+    if (companyError || !company) {
       throw new NotFoundException('Empresa no encontrada');
     }
 
-    return company;
+    // Flatten the response to include email at the root level
+    return {
+      id: company.id,
+      user_id: company.user_id,
+      name: company.name,
+      nit: company.nit_id,
+      nitId: company.nit_id,
+      phone: company.phone,
+      address: company.address,
+      invitationCode: company.invitation_code,
+      email: company.users?.email,
+      created_at: company.created_at,
+      updated_at: company.updated_at,
+    };
   }
 
   async updateMyCompany(userId: string, userType: string, dto: UpdateCompanyDto) {
@@ -33,18 +47,38 @@ export class CompaniesService {
 
     const supabase = this.supabaseService.getClient();
 
+    // Map 'nit' to 'nit_id' for database compatibility
+    const updateData: any = { ...dto };
+    if (dto.nit) {
+      updateData.nit_id = dto.nit;
+      delete updateData.nit;
+    }
+
     const { data: company, error } = await supabase
       .from('companies')
-      .update(dto)
+      .update(updateData)
       .eq('user_id', userId)
-      .select()
+      .select('*, users(email)')
       .single();
 
     if (error) {
       throw new NotFoundException('Error al actualizar empresa');
     }
 
-    return company;
+    // Return flattened response with email
+    return {
+      id: company.id,
+      user_id: company.user_id,
+      name: company.name,
+      nit: company.nit_id,
+      nitId: company.nit_id,
+      phone: company.phone,
+      address: company.address,
+      invitationCode: company.invitation_code,
+      email: company.users?.email,
+      created_at: company.created_at,
+      updated_at: company.updated_at,
+    };
   }
 
   async generateNewInvitationCode(userId: string, userType: string) {

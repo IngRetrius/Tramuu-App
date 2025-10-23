@@ -3,9 +3,38 @@
  * Centralized configuration for API endpoints and settings
  */
 
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+// Get API URL from environment variables
 // For React Native, we need to use a local IP or production URL
-// Localhost won't work on physical devices
-const API_URL = process.env.API_URL || 'http://localhost:3000/api';
+// Localhost won't work on physical devices or iOS simulators
+
+// Use localhost for web, IP/tunnel for mobile
+const getApiUrl = () => {
+  // If explicitly set in environment, use that
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // For web development, use localhost
+  if (Platform.OS === 'web') {
+    return 'http://localhost:3000/api';
+  }
+
+  // For mobile, use local IP (default)
+  return 'http://192.168.1.23:3000/api';
+};
+
+const API_URL = getApiUrl();
+
+// Log API URL for debugging
+if (__DEV__) {
+  console.log('🌐 API Configuration:');
+  console.log('   Platform:', Platform.OS);
+  console.log('   API URL:', API_URL);
+  console.log('   ENV URL:', process.env.EXPO_PUBLIC_API_URL || 'Not set');
+}
 
 export const API_CONFIG = {
   BASE_URL: API_URL,

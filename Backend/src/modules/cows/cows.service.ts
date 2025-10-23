@@ -7,19 +7,31 @@ import { UpdateCowDto } from './dto/update-cow.dto';
 export class CowsService {
   constructor(private supabaseService: SupabaseService) {}
 
-  async findAll(companyId: string, filters?: { breed?: string; status?: string; active?: boolean }) {
+  async findAll(companyId: string, filters?: { breed?: string; status?: string; active?: boolean; search?: string }) {
     const supabase = this.supabaseService.getClient();
 
     let query = supabase.from('cows').select('*').eq('company_id', companyId);
 
+    // Search filter - searches in cow_id and name
+    if (filters?.search) {
+      query = query.or(`cow_id.ilike.%${filters.search}%,name.ilike.%${filters.search}%`);
+    }
+
+    // Breed filter
     if (filters?.breed) {
       query = query.eq('breed', filters.breed);
     }
+
+    // Status filter
     if (filters?.status) {
       query = query.eq('status', filters.status);
     }
+
+    // Active filter - default to only active cows
     if (filters?.active !== undefined) {
       query = query.eq('is_active', filters.active);
+    } else {
+      query = query.eq('is_active', true);
     }
 
     query = query.order('created_at', { ascending: false });
@@ -71,6 +83,8 @@ export class CowsService {
         name: dto.name,
         breed: dto.breed,
         status: dto.status,
+        date_of_birth: dto.dateOfBirth,
+        notes: dto.notes,
       })
       .select()
       .single();

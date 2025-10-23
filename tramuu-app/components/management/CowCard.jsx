@@ -1,6 +1,12 @@
 import { Droplet, TriangleAlert } from "lucide-react-native";
-import { View, Image, Text, StyleSheet  } from "react-native";
+import { View, Image, Text, StyleSheet } from "react-native";
+import PropTypes from 'prop-types';
 
+/**
+ * CowCard Component
+ * Displays a card with cow information including image, status, breed, production and age
+ * @param {Object} cow - Cow data object
+ */
 export default function CowCard({ cow }) {
   return (
     <View style={styles.cowCard}>
@@ -9,10 +15,10 @@ export default function CowCard({ cow }) {
 
         <View style={styles.cowInfo}>
           <View style={styles.cowHeader}>
-            <Text style={styles.cowId}>{cow.id}</Text>
+            <Text style={styles.cowId}>{cow.displayName}</Text>
             {cow.alert && (
               <View style={styles.alertBadge}>
-                <TriangleAlert />
+                <TriangleAlert color="#92400E" size={16} />
                 <Text style={styles.alertText}>Atención</Text>
               </View>
             )}
@@ -29,7 +35,7 @@ export default function CowCard({ cow }) {
 
           <View style={styles.cowStats}>
             <View style={styles.stat}>
-              <Droplet />
+              <Droplet color="#3B82F6" size={16} />
               <Text style={styles.statText}>{cow.production}/día</Text>
             </View>
             <Text style={styles.ageText}>{cow.age}</Text>
@@ -126,4 +132,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-})
+});
+
+// PropTypes for type checking
+CowCard.propTypes = {
+  cow: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    displayName: PropTypes.string.isRequired,
+    image: PropTypes.string.isRequired,
+    status: PropTypes.string.isRequired,
+    breed: PropTypes.string.isRequired,
+    production: PropTypes.string.isRequired,
+    age: PropTypes.string.isRequired,
+    alert: PropTypes.bool,
+    statusColor: PropTypes.string.isRequired,
+    breedColor: PropTypes.string.isRequired,
+  }).isRequired,
+};

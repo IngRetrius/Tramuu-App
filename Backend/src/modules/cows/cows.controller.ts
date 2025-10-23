@@ -13,9 +13,10 @@ export class CowsController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las vacas' })
-  @ApiQuery({ name: 'breed', required: false })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'active', required: false, type: Boolean })
+  @ApiQuery({ name: 'search', required: false, description: 'Buscar por ID o nombre de vaca' })
+  @ApiQuery({ name: 'breed', required: false, description: 'Filtrar por raza' })
+  @ApiQuery({ name: 'status', required: false, description: 'Filtrar por estado' })
+  @ApiQuery({ name: 'active', required: false, type: Boolean, description: 'Filtrar por vacas activas/inactivas' })
   @ApiResponse({ status: 200, description: 'Lista de vacas' })
   async findAll(@CurrentUser('companyId') companyId: string, @Query() filters: any) {
     return this.cowsService.findAll(companyId, filters);

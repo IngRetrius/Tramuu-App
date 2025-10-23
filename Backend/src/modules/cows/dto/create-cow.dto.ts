@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateCowDto {
   @ApiProperty({ example: 'C-001' })
@@ -21,4 +21,14 @@ export class CreateCowDto {
   @IsString()
   @IsNotEmpty()
   status: string;
+
+  @ApiProperty({ example: '2020-05-15', required: false })
+  @IsDateString()
+  @IsOptional()
+  dateOfBirth?: string;
+
+  @ApiProperty({ example: 'Observaciones adicionales', required: false })
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }

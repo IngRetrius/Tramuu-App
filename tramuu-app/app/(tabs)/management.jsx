@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dimensions,
   ScrollView,
@@ -11,14 +11,66 @@ import {
   RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
 import CowCard from '@/components/management/CowCard';
 import { Funnel, Plus, Search, AlertCircle } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { cowsService } from '@/services';
 
+// Constants
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
+const STATUS_COLORS = {
+  'Preñada': '#10B981',
+  'Lactante': '#3B82F6',
+  'Seca': '#F59E0B',
+};
+
+const LOW_PRODUCTION_THRESHOLD = 5; // Liters per day
+const MILLISECONDS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
+
+/**
+ * Calculate age from date of birth
+ * @param {string} dateOfBirth - Date in ISO format
+ * @returns {string} Age text (e.g., "2 años" or "N/A")
+ */
+const calculateAge = (dateOfBirth) => {
+  if (!dateOfBirth) return 'N/A';
+
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+  const ageInYears = Math.floor((today - birthDate) / MILLISECONDS_PER_YEAR);
+
+  return `${ageInYears} año${ageInYears !== 1 ? 's' : ''}`;
+};
+
+/**
+ * Map backend cow data to frontend format
+ * @param {Object} cow - Raw cow data from backend
+ * @returns {Object} Formatted cow data for display
+ */
+const mapCowData = (cow) => {
+  const dailyProduction = cow.daily_production || 0;
+  const status = cow.status || 'Activa';
+
+  return {
+    id: cow.id,
+    cowId: cow.cow_id,
+    name: cow.name,
+    displayName: cow.name || cow.cow_id,
+    image: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=150&h=150&fit=crop',
+    status,
+    breed: cow.breed || 'Holstein',
+    production: `${dailyProduction}L`,
+    age: calculateAge(cow.date_of_birth),
+    alert: dailyProduction > 0 && dailyProduction < LOW_PRODUCTION_THRESHOLD,
+    statusColor: STATUS_COLORS[status] || '#F59E0B',
+    breedColor: '#E5E7EB'
+  };
+};
+
 export default function Management() {
+  const router = useRouter();
   const [searchText, setSearchText] = useState('');
   const [selectedBreed, setSelectedBreed] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -27,49 +79,58 @@ export default function Management() {
   const [error, setError] = useState(null);
   const [cowsData, setCowsData] = useState([]);
 
-  // Load cows from backend
+  /**
+   * Load cows from backend with current filters
+   */
   const loadCows = async () => {
     try {
       const data = await cowsService.getCows({
         search: searchText || undefined,
+        breed: selectedBreed || undefined,
+        status: selectedStatus || undefined,
       });
 
       // Map backend data to frontend format
-      const mappedCows = (data.cows || data || []).map(cow => ({
-        id: cow.id || cow.tag,
-        image: 'https://images.unsplash.com/photo-1516467508483-a7212febe31a?w=150&h=150&fit=crop',
-        status: cow.status || 'Activa',
-        breed: cow.breed || 'Holstein',
-        production: `${cow.averageProduction || 0}L`,
-        age: cow.age ? `${cow.age} años` : 'N/A',
-        alert: cow.hasAlert || false,
-        statusColor: cow.status === 'Preñada' ? '#10B981' : '#F59E0B',
-        breedColor: '#E5E7EB'
-      }));
+      const cowsArray = data.cows || data || [];
+      const mappedCows = cowsArray.map(mapCowData);
 
       setCowsData(mappedCows);
       setError(null);
     } catch (err) {
       console.error('Error loading cows:', err);
       setError(err.message);
-      // Keep previous data on error
+      // Keep previous data on error to avoid empty screen
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // Load cows on mount and when search changes
+  // Load cows on mount and when search or filters change
   useEffect(() => {
     loadCows();
-  }, [searchText]);
+  }, [searchText, selectedBreed, selectedStatus]);
 
-  // Handle pull to refresh
+  /**
+   * Reload cows when screen gains focus (e.g., after adding a new cow)
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadCows();
+    }, [])
+  );
+
+  /**
+   * Handle pull-to-refresh action
+   */
   const onRefresh = () => {
     setRefreshing(true);
     loadCows();
   };
 
+  /**
+   * Filter button component for breed and status filters
+   */
   const FilterButton = ({ title, isSelected, onPress, color }) => (
     <TouchableOpacity
       style={[
@@ -189,7 +250,10 @@ export default function Management() {
       </ScrollView>
 
       {/* Add Button */}
-      <TouchableOpacity style={styles.addButton}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => router.push('/cowForm')}
+      >
         <Plus color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>

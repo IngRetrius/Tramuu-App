@@ -60,28 +60,84 @@ export default function CompanyDashboard() {
   const loadDashboardData = async () => {
     try {
       const data = await dashboardService.getSummary();
+      console.log('Dashboard data received:', data);
 
       // Map backend data to frontend format
       setDashboardData({
         produccionHoy: {
-          value: `${data.todayProduction || 0}L`,
-          change: data.productionChange || '+0% vs ayer',
-          isPositive: (data.productionChange || '').includes('+')
+          value: `${data.today?.totalLiters || 0}L`,
+          change: `${data.today?.milkingsAM || 0} AM / ${data.today?.milkingsPM || 0} PM`,
+          isPositive: true
         },
         calidadPromedio: {
-          value: `${data.averageQuality || 0}%`,
-          label: data.qualityLabel || 'N/A',
-          isPositive: data.averageQuality >= 90
+          value: `${data.today?.avgPerCow || 0}L`,
+          label: 'Por vaca',
+          isPositive: true
         },
         entregasHoy: {
-          value: String(data.deliveriesToday || 0),
-          pendientes: `${data.pendingDeliveries || 0} pendientes`
+          value: String(data.thisWeek?.totalLiters || 0),
+          pendientes: 'Esta semana'
         },
         lecherosActivos: {
-          value: String(data.activeCows || 0),
-          total: `de ${data.totalCows || 0} total`
+          value: String(data.today?.activeCows || 0),
+          total: `vacas activas`
         }
       });
+
+      // Update top cows if available
+      if (data.topProducers && data.topProducers.length > 0) {
+        const formattedCows = data.topProducers.map(cow => ({
+          id: cow.id,
+          name: cow.name || cow.cow_id || 'Sin nombre',
+          breed: 'Holstein', // Default breed
+          production: `${cow.daily_production || 0}L`,
+          change: '+0%',
+          isPositive: true
+        }));
+        setTopCows(formattedCows);
+      }
+
+      // Update chart data with REAL weekly production data
+      if (data.thisWeek && data.thisWeek.dailyProduction) {
+        const dailyData = data.thisWeek.dailyProduction;
+
+        // Extract labels (day names) and values (total liters)
+        const labels = dailyData.map(day => day.dayName);
+        const values = dailyData.map(day => day.totalLiters);
+
+        // Ensure all values are at least 1 (to avoid chart rendering issues)
+        const safeChartValues = values.map(val => Math.max(val, 1));
+
+        console.log('Chart data (REAL):', {
+          labels,
+          values: safeChartValues,
+          rawData: dailyData
+        });
+
+        setChartData({
+          labels,
+          datasets: [
+            {
+              data: safeChartValues,
+              strokeWidth: 3,
+              color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+            }
+          ]
+        });
+      } else {
+        // Fallback: use dummy data if dailyProduction is not available
+        console.warn('No dailyProduction data available, using fallback');
+        setChartData({
+          labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+          datasets: [
+            {
+              data: [1, 1, 1, 1, 1, 1, 1],
+              strokeWidth: 3,
+              color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+            }
+          ]
+        });
+      }
 
       setError(null);
     } catch (err) {
@@ -290,7 +346,7 @@ export default function CompanyDashboard() {
             isPositive={dashboardData.produccionHoy.isPositive}
           />
           <MetricCard
-            title="Calidad Promedio"
+            title="Promedio por Vaca"
             value={dashboardData.calidadPromedio.value}
             subtitle={dashboardData.calidadPromedio.label}
             icon={Star}
@@ -298,14 +354,14 @@ export default function CompanyDashboard() {
             isPositive={true}
           />
           <MetricCard
-            title="Entregas Hoy"
-            value={dashboardData.entregasHoy.value}
+            title="Producción Semanal"
+            value={`${dashboardData.entregasHoy.value}L`}
             subtitle={dashboardData.entregasHoy.pendientes}
             icon={Truck}
             color="#60A5FA"
           />
           <MetricCard
-            title="Lecheros Activos"
+            title="Vacas Activas"
             value={dashboardData.lecherosActivos.value}
             subtitle={dashboardData.lecherosActivos.total}
             icon={Users}
@@ -314,48 +370,52 @@ export default function CompanyDashboard() {
         </View>
 
         {/* Gráfico de Producción Semanal */}
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Producción Semanal</Text>
-            <View style={styles.periodSelector}>
-              {['Día', 'Semana', 'Mes'].map((period) => (
-                <PeriodButton
-                  key={period}
-                  period={period}
-                  isSelected={selectedPeriod === period}
-                  onPress={() => setSelectedPeriod(period)}
-                />
-              ))}
+        {!loading && chartData.datasets[0].data.length > 0 && (
+          <View style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>Producción Semanal</Text>
+              <View style={styles.periodSelector}>
+                {['Día', 'Semana', 'Mes'].map((period) => (
+                  <PeriodButton
+                    key={period}
+                    period={period}
+                    isSelected={selectedPeriod === period}
+                    onPress={() => setSelectedPeriod(period)}
+                  />
+                ))}
+              </View>
             </View>
+            <LineChart
+              data={chartData}
+              width={screenWidth - 60}
+              height={200}
+              chartConfig={{
+                backgroundColor: '#FFFFFF',
+                backgroundGradientFrom: '#FFFFFF',
+                backgroundGradientTo: '#FFFFFF',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                style: {
+                  borderRadius: 16,
+                },
+                propsForDots: {
+                  r: '4',
+                  strokeWidth: '2',
+                  stroke: '#60A5FA'
+                }
+              }}
+              bezier
+              style={styles.chart}
+              withInnerLines={false}
+              withOuterLines={false}
+              withHorizontalLines={true}
+              withVerticalLines={false}
+              withShadow={false}
+              onDataPointClick={() => {}} // Disable double-click events
+            />
           </View>
-          <LineChart
-            data={chartData}
-            width={screenWidth - 60}
-            height={200}
-            chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-              style: {
-                borderRadius: 16,
-              },
-              propsForDots: {
-                r: '4',
-                strokeWidth: '2',
-                stroke: '#60A5FA'
-              }
-            }}
-            bezier
-            style={styles.chart}
-            withInnerLines={false}
-            withOuterLines={false}
-            withHorizontalLines={true}
-            withVerticalLines={false}
-          />
-        </View>
+        )}
 
         {/* Top 5 Vacas Productoras */}
         {topCows.length > 0 && (

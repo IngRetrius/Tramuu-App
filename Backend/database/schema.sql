@@ -27,6 +27,7 @@ CREATE TABLE companies (
   name VARCHAR(255) NOT NULL,
   nit_id VARCHAR(50) UNIQUE NOT NULL,
   phone VARCHAR(20),
+  address TEXT,
   invitation_code VARCHAR(50) UNIQUE NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -56,6 +57,8 @@ CREATE TABLE cows (
   name VARCHAR(100),
   breed VARCHAR(50) NOT NULL,
   status VARCHAR(50) NOT NULL,
+  date_of_birth DATE,
+  notes TEXT,
   daily_production DECIMAL(10, 2) DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW(),

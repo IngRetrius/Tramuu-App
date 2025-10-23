@@ -71,6 +71,7 @@ export class AuthService {
         name: dto.name,
         nit_id: dto.nitId,
         phone: dto.phone,
+        address: dto.address,
         invitation_code: invitationCode,
       })
       .select()
@@ -100,6 +101,7 @@ export class AuthService {
         name: company.name,
         nitId: company.nit_id,
         phone: company.phone,
+        address: company.address,
         invitationCode: company.invitation_code,
       },
       accessToken,

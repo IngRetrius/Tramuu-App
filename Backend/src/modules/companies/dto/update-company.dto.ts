@@ -7,6 +7,11 @@ export class UpdateCompanyDto {
   @IsOptional()
   name?: string;
 
+  @ApiProperty({ example: '800197268-4', required: false })
+  @IsString()
+  @IsOptional()
+  nit?: string;
+
   @ApiProperty({ example: 'Cra 2 Bis Cl 22', required: false })
   @IsString()
   @IsOptional()
