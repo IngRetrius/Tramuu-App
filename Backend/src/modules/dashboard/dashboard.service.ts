@@ -203,4 +203,122 @@ export class DashboardService {
       },
     };
   }
+
+  async getProductionByPeriod(companyId: string, period: 'day' | 'week' | 'month') {
+    const supabase = this.supabaseService.getClient();
+    const currentDate = new Date();
+    let startDate: Date;
+    let labels: string[] = [];
+    let dataPoints: { date: string; label: string; totalLiters: number; milkingsCount: number }[] = [];
+
+    if (period === 'day') {
+      // Last 24 hours - show by shift (AM/PM)
+      const today = currentDate.toISOString().split('T')[0];
+
+      const { data: todayMilkings } = await supabase
+        .from('milkings')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('milking_date', today);
+
+      // Group by shift
+      const amMilkings = todayMilkings?.filter(m => m.shift === 'AM') || [];
+      const pmMilkings = todayMilkings?.filter(m => m.shift === 'PM') || [];
+
+      const amTotal = amMilkings.reduce((sum, m) => sum + parseFloat(m.total_liters), 0);
+      const pmTotal = pmMilkings.reduce((sum, m) => sum + parseFloat(m.total_liters), 0);
+
+      labels = ['AM', 'PM'];
+      dataPoints = [
+        { date: today, label: 'AM', totalLiters: parseFloat(amTotal.toFixed(2)), milkingsCount: amMilkings.length },
+        { date: today, label: 'PM', totalLiters: parseFloat(pmTotal.toFixed(2)), milkingsCount: pmMilkings.length },
+      ];
+
+    } else if (period === 'week') {
+      // Last 7 days
+      startDate = new Date(currentDate);
+      startDate.setDate(startDate.getDate() - 6);
+      const startDateStr = startDate.toISOString().split('T')[0];
+
+      const { data: weekMilkings } = await supabase
+        .from('milkings')
+        .select('*')
+        .eq('company_id', companyId)
+        .gte('milking_date', startDateStr);
+
+      // Group by day
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+
+        const dayMilkings = weekMilkings?.filter(m => m.milking_date === dateStr) || [];
+        const dayTotal = dayMilkings.reduce((sum, m) => sum + parseFloat(m.total_liters), 0);
+
+        const dayName = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][date.getDay()];
+        labels.push(dayName);
+        dataPoints.push({
+          date: dateStr,
+          label: dayName,
+          totalLiters: parseFloat(dayTotal.toFixed(2)),
+          milkingsCount: dayMilkings.length,
+        });
+      }
+
+    } else if (period === 'month') {
+      // Last 30 days grouped by week
+      startDate = new Date(currentDate);
+      startDate.setDate(startDate.getDate() - 29);
+      const startDateStr = startDate.toISOString().split('T')[0];
+
+      const { data: monthMilkings } = await supabase
+        .from('milkings')
+        .select('*')
+        .eq('company_id', companyId)
+        .gte('milking_date', startDateStr);
+
+      // Group by week (4-5 weeks)
+      const weeksCount = 4;
+      const daysPerWeek = 7;
+
+      for (let week = 0; week < weeksCount; week++) {
+        const weekStart = new Date(startDate);
+        weekStart.setDate(weekStart.getDate() + (week * daysPerWeek));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + daysPerWeek - 1);
+
+        const weekStartStr = weekStart.toISOString().split('T')[0];
+        const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+        const weekMilkingsData = monthMilkings?.filter(m =>
+          m.milking_date >= weekStartStr && m.milking_date <= weekEndStr
+        ) || [];
+
+        const weekTotal = weekMilkingsData.reduce((sum, m) => sum + parseFloat(m.total_liters), 0);
+
+        const weekLabel = `S${week + 1}`;
+        labels.push(weekLabel);
+        dataPoints.push({
+          date: weekStartStr,
+          label: weekLabel,
+          totalLiters: parseFloat(weekTotal.toFixed(2)),
+          milkingsCount: weekMilkingsData.length,
+        });
+      }
+    }
+
+    const totalLiters = dataPoints.reduce((sum, d) => sum + d.totalLiters, 0);
+    const avgLiters = dataPoints.length > 0 ? totalLiters / dataPoints.length : 0;
+
+    return {
+      period,
+      labels,
+      dataPoints,
+      summary: {
+        totalLiters: parseFloat(totalLiters.toFixed(2)),
+        avgLiters: parseFloat(avgLiters.toFixed(2)),
+        dataPointsCount: dataPoints.length,
+      },
+    };
+  }
 }

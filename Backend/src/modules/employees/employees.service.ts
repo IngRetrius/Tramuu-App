@@ -162,4 +162,81 @@ export class EmployeesService {
 
     return updated;
   }
+
+  async getMyProfile(userId: string, userType: string, employeeId: string) {
+    if (userType !== 'employee') {
+      throw new ForbiddenException('Solo empleados pueden acceder a esta información');
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // Get employee with company info and user email
+    const { data: employee, error } = await supabase
+      .from('employees')
+      .select('*, companies(name, invitation_code), users(email)')
+      .eq('id', employeeId)
+      .single();
+
+    if (error || !employee) {
+      throw new NotFoundException('Empleado no encontrado');
+    }
+
+    // Flatten the response
+    return {
+      id: employee.id,
+      user_id: employee.user_id,
+      name: employee.name,
+      documentId: employee.document_id,
+      phone: employee.phone,
+      email: employee.users?.email,
+      isActive: employee.is_active,
+      companyId: employee.company_id,
+      companyName: employee.companies?.name,
+      companyInvitationCode: employee.companies?.invitation_code,
+      created_at: employee.created_at,
+      updated_at: employee.updated_at,
+    };
+  }
+
+  async updateMyProfile(userId: string, userType: string, employeeId: string, dto: UpdateEmployeeDto) {
+    if (userType !== 'employee') {
+      throw new ForbiddenException('Solo empleados pueden actualizar esta información');
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // Map 'documentId' to 'document_id' for database compatibility
+    const updateData: any = { ...dto };
+    if (dto.documentId) {
+      updateData.document_id = dto.documentId;
+      delete updateData.documentId;
+    }
+
+    const { data: employee, error } = await supabase
+      .from('employees')
+      .update(updateData)
+      .eq('id', employeeId)
+      .select('*, companies(name, invitation_code), users(email)')
+      .single();
+
+    if (error) {
+      throw new NotFoundException('Error al actualizar perfil');
+    }
+
+    // Return flattened response
+    return {
+      id: employee.id,
+      user_id: employee.user_id,
+      name: employee.name,
+      documentId: employee.document_id,
+      phone: employee.phone,
+      email: employee.users?.email,
+      isActive: employee.is_active,
+      companyId: employee.company_id,
+      companyName: employee.companies?.name,
+      companyInvitationCode: employee.companies?.invitation_code,
+      created_at: employee.created_at,
+      updated_at: employee.updated_at,
+    };
+  }
 }

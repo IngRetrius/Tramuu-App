@@ -14,8 +14,10 @@ class CompaniesService {
   async getProfile() {
     try {
       const response = await api.get(API_ENDPOINTS.COMPANIES.GET_PROFILE);
-      return response.data;
+      // Handle both formats: direct data or nested in data property
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getProfile:', error);
       throw error;
     }
   }
@@ -31,8 +33,10 @@ class CompaniesService {
         API_ENDPOINTS.COMPANIES.UPDATE_PROFILE,
         profileData
       );
-      return response.data;
+      // Handle both formats: direct data or nested in data property
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateProfile:', error);
       throw error;
     }
   }
@@ -44,8 +48,10 @@ class CompaniesService {
   async generateInvitationCode() {
     try {
       const response = await api.post(API_ENDPOINTS.COMPANIES.GENERATE_CODE);
-      return response.data;
+      // Handle both formats: direct data or nested in data property
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in generateInvitationCode:', error);
       throw error;
     }
   }

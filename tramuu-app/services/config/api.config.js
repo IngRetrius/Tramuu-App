@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
     SUMMARY: '/dashboard/summary',
     ALERTS: '/dashboard/alerts',
     PRODUCTION_TRENDS: '/dashboard/production-trends',
+    PRODUCTION: '/dashboard/production',
   },
 
   // Cows endpoints
@@ -121,6 +122,8 @@ export const API_ENDPOINTS = {
 
   // Employees endpoints
   EMPLOYEES: {
+    GET_PROFILE: '/employees/me',
+    UPDATE_PROFILE: '/employees/me',
     LIST: '/employees',
     CREATE: '/employees',
     GET_BY_ID: (id) => `/employees/${id}`,
@@ -130,9 +133,9 @@ export const API_ENDPOINTS = {
 
   // Companies endpoints
   COMPANIES: {
-    GET_PROFILE: '/companies/profile',
-    UPDATE_PROFILE: '/companies/profile',
-    GENERATE_CODE: '/companies/invitation-code',
+    GET_PROFILE: '/companies/me',
+    UPDATE_PROFILE: '/companies/me',
+    GENERATE_CODE: '/companies/generate-code',
   },
 
   // Auth endpoints (additional)

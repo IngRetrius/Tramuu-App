@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "tramuu-app",
+    "name": "Tramuu",
     "slug": "tramuu-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,9 +9,13 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tramuu.app",
+      "buildNumber": "1.0.0"
     },
     "android": {
+      "package": "com.tramuu.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/tramuu-logo.webp",
@@ -19,7 +23,12 @@
         "monochromeImage": "./assets/images/tramuu-logo.webp"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "output": "static",
@@ -43,6 +52,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
     }
   }
 }

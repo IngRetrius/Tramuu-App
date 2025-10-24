@@ -21,7 +21,7 @@ export default function SettingItem({
         </View>
       </View>
       <View style={styles.settingRight}>
-        {rightComponent}
+        {rightComponent || null}
         {hasChevron && <ChevronRight size={20} color="#9CA3AF" />}
       </View>
     </TouchableOpacity>

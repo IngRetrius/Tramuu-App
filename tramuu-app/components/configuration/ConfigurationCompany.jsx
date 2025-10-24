@@ -26,8 +26,9 @@ import {
   View,
   ActivityIndicator,
   RefreshControl,
-  Clipboard
+  Platform
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import KeyboardAwareWrapper from '../KeyboardAwareWrapper';
 import { InputField, ProfilePhoto, SettingItem, Tab, ToggleSwitch } from '../ui';
@@ -187,8 +188,8 @@ export default function ConfigurationCompany() {
         [
           {
             text: "Copiar",
-            onPress: () => {
-              Clipboard.setString(invitationCode);
+            onPress: async () => {
+              await Clipboard.setStringAsync(invitationCode);
               Alert.alert('Copiado', 'Código copiado al portapapeles');
             }
           },
@@ -207,8 +208,8 @@ export default function ConfigurationCompany() {
   const handleSaveProfile = async () => {
     try {
       // Validate required fields
-      if (!companyName || !email) {
-        Alert.alert('Error', 'Por favor completa los campos obligatorios');
+      if (!companyName) {
+        Alert.alert('Error', 'Por favor completa el nombre de la empresa');
         return;
       }
 
@@ -216,18 +217,23 @@ export default function ConfigurationCompany() {
 
       const profileData = {
         name: companyName,
-        nit: companyNit,
-        email: email,
+        nit: companyNit || undefined,
         phone: phone || undefined,
         address: address || undefined,
       };
 
+      console.log('Sending profile data:', profileData);
+
       await companiesService.updateProfile(profileData);
 
       Alert.alert('Éxito', 'Los cambios han sido guardados exitosamente');
+
+      // Reload profile to get updated data
+      loadProfile();
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', error.message || 'No se pudieron guardar los cambios');
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudieron guardar los cambios';
+      Alert.alert('Error', Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
     } finally {
       setSaving(false);
     }
@@ -291,6 +297,7 @@ export default function ConfigurationCompany() {
             placeholder="email@empresa.com"
             icon={Mail}
             keyboardType="email-address"
+            editable={false}
           />
 
           <InputField
@@ -319,8 +326,8 @@ export default function ConfigurationCompany() {
               <Text style={styles.invitationCodeText}>{invitationCode}</Text>
               <TouchableOpacity
                 style={styles.copyButton}
-                onPress={() => {
-                  Clipboard.setString(invitationCode);
+                onPress={async () => {
+                  await Clipboard.setStringAsync(invitationCode);
                   Alert.alert('Copiado', 'Código copiado al portapapeles');
                 }}
               >
@@ -550,14 +557,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 20,
     marginBottom: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
     elevation: 5,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.1)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+    }),
   },
   cardTitle: {
     fontSize: 16,

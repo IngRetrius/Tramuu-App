@@ -20,6 +20,29 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
+  @Get('me')
+  @ApiOperation({ summary: 'Obtener perfil del empleado actual' })
+  @ApiResponse({ status: 200, description: 'Perfil del empleado' })
+  async getMyProfile(
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('userType') userType: string,
+    @CurrentUser('employeeId') employeeId: string,
+  ) {
+    return this.employeesService.getMyProfile(userId, userType, employeeId);
+  }
+
+  @Put('me')
+  @ApiOperation({ summary: 'Actualizar perfil del empleado actual' })
+  @ApiResponse({ status: 200, description: 'Perfil actualizado' })
+  async updateMyProfile(
+    @CurrentUser('sub') userId: string,
+    @CurrentUser('userType') userType: string,
+    @CurrentUser('employeeId') employeeId: string,
+    @Body() dto: UpdateEmployeeDto,
+  ) {
+    return this.employeesService.updateMyProfile(userId, userType, employeeId, dto);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Obtener todos los empleados de la empresa' })
   @ApiResponse({ status: 200, description: 'Lista de empleados' })

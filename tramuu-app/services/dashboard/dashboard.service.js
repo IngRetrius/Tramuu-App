@@ -48,6 +48,23 @@ class DashboardService {
       throw error;
     }
   }
+
+  /**
+   * Get production data by period
+   * @param {string} period - 'day', 'week', or 'month'
+   * @returns {Promise<Object>} Production data for the specified period
+   */
+  async getProductionByPeriod(period = 'week') {
+    try {
+      const response = await api.get(API_ENDPOINTS.DASHBOARD.PRODUCTION, {
+        params: { period },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching production by period:', error);
+      throw error;
+    }
+  }
 }
 
 export default new DashboardService();

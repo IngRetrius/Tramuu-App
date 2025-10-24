@@ -29,10 +29,12 @@ import { dashboardService } from '@/services';
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function CompanyDashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState('Día');
+  const [selectedPeriod, setSelectedPeriod] = useState('Semana');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [chartTitle, setChartTitle] = useState('Producción Semanal');
+  const [chartLoading, setChartLoading] = useState(false);
 
   // Datos del dashboard (con valores por defecto)
   const [dashboardData, setDashboardData] = useState({
@@ -140,6 +142,9 @@ export default function CompanyDashboard() {
       }
 
       setError(null);
+
+      // Load initial production data by period
+      loadProductionByPeriod(selectedPeriod);
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError(err.message);
@@ -150,10 +155,97 @@ export default function CompanyDashboard() {
     }
   };
 
+  // Load production data by period
+  const loadProductionByPeriod = async (period) => {
+    try {
+      console.log(`Loading production data for period: ${period}`);
+
+      // Show loading state for chart
+      setChartLoading(true);
+
+      // Map Spanish period names to English for API
+      const periodMap = {
+        'Día': 'day',
+        'Semana': 'week',
+        'Mes': 'month'
+      };
+
+      const apiPeriod = periodMap[period] || 'week';
+      const response = await dashboardService.getProductionByPeriod(apiPeriod);
+
+      console.log('Production data received:', response);
+
+      // Extract data from nested structure
+      const data = response.data || response;
+
+      console.log('Extracted data:', data);
+      console.log('Labels:', data.labels);
+      console.log('DataPoints:', data.dataPoints);
+
+      // Update chart title
+      const titleMap = {
+        'Día': 'Producción de Hoy',
+        'Semana': 'Producción Semanal',
+        'Mes': 'Producción Mensual'
+      };
+      setChartTitle(titleMap[period] || 'Producción');
+
+      // Update chart data
+      if (data.labels && data.dataPoints && Array.isArray(data.labels) && Array.isArray(data.dataPoints)) {
+        const values = data.dataPoints.map(d => Math.max(d.totalLiters || 0, 1)); // Ensure minimum 1 to avoid chart issues
+
+        console.log('Chart values:', values);
+        console.log('Chart labels:', data.labels);
+
+        // Create a completely new object to force React to re-render
+        const newChartData = {
+          labels: [...data.labels], // Create new array
+          datasets: [
+            {
+              data: [...values], // Create new array
+              strokeWidth: 3,
+              color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+            }
+          ],
+          // Add a timestamp to ensure the object is different
+          _timestamp: Date.now()
+        };
+
+        console.log('New chart data:', newChartData);
+
+        // Small delay to ensure unmount/remount
+        setTimeout(() => {
+          setChartData(newChartData);
+          setChartLoading(false);
+          console.log('Chart data updated successfully');
+        }, 100);
+      } else {
+        console.warn('No labels or dataPoints found in response', {
+          hasLabels: !!data.labels,
+          hasDataPoints: !!data.dataPoints,
+          labelsIsArray: Array.isArray(data.labels),
+          dataPointsIsArray: Array.isArray(data.dataPoints)
+        });
+        setChartLoading(false);
+      }
+    } catch (err) {
+      console.error('Error loading production by period:', err);
+      setChartLoading(false);
+      // Don't show error alert for period changes, just log it
+    }
+  };
+
   // Load data on component mount
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Reload production data when period changes
+  useEffect(() => {
+    if (!loading) {
+      loadProductionByPeriod(selectedPeriod);
+    }
+  }, [selectedPeriod]);
 
   // Reload data when screen comes into focus
   useFocusEffect(
@@ -369,11 +461,11 @@ export default function CompanyDashboard() {
           />
         </View>
 
-        {/* Gráfico de Producción Semanal */}
+        {/* Gráfico de Producción */}
         {!loading && chartData.datasets[0].data.length > 0 && (
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>Producción Semanal</Text>
+              <Text style={styles.chartTitle}>{chartTitle}</Text>
               <View style={styles.periodSelector}>
                 {['Día', 'Semana', 'Mes'].map((period) => (
                   <PeriodButton
@@ -385,35 +477,43 @@ export default function CompanyDashboard() {
                 ))}
               </View>
             </View>
-            <LineChart
-              data={chartData}
-              width={screenWidth - 60}
-              height={200}
-              chartConfig={{
-                backgroundColor: '#FFFFFF',
-                backgroundGradientFrom: '#FFFFFF',
-                backgroundGradientTo: '#FFFFFF',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-                style: {
-                  borderRadius: 16,
-                },
-                propsForDots: {
-                  r: '4',
-                  strokeWidth: '2',
-                  stroke: '#60A5FA'
-                }
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={false}
-              withOuterLines={false}
-              withHorizontalLines={true}
-              withVerticalLines={false}
-              withShadow={false}
-              onDataPointClick={() => {}} // Disable double-click events
-            />
+            {chartLoading ? (
+              <View style={styles.chartLoadingContainer}>
+                <ActivityIndicator size="small" color="#60A5FA" />
+                <Text style={styles.chartLoadingText}>Actualizando gráfico...</Text>
+              </View>
+            ) : (
+              <LineChart
+                key={`chart-${selectedPeriod}-${chartData._timestamp || Date.now()}`}
+                data={chartData}
+                width={screenWidth - 60}
+                height={200}
+                chartConfig={{
+                  backgroundColor: '#FFFFFF',
+                  backgroundGradientFrom: '#FFFFFF',
+                  backgroundGradientTo: '#FFFFFF',
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                  style: {
+                    borderRadius: 16,
+                  },
+                  propsForDots: {
+                    r: '4',
+                    strokeWidth: '2',
+                    stroke: '#60A5FA'
+                  }
+                }}
+                bezier
+                style={styles.chart}
+                withInnerLines={false}
+                withOuterLines={false}
+                withHorizontalLines={true}
+                withVerticalLines={false}
+                withShadow={false}
+                onDataPointClick={() => {}} // Disable double-click events
+              />
+            )}
           </View>
         )}
 
@@ -587,6 +687,17 @@ const styles = StyleSheet.create({
   chart: {
     marginVertical: 8,
     borderRadius: 12,
+  },
+  chartLoadingContainer: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  chartLoadingText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6B7280',
   },
   card: {
     backgroundColor: '#FFFFFF',

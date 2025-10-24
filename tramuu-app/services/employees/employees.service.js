@@ -8,6 +8,38 @@ import { API_ENDPOINTS } from '../config/api.config';
 
 class EmployeesService {
   /**
+   * Get employee profile (for logged-in employee)
+   * @returns {Promise<Object>} Employee profile data
+   */
+  async getProfile() {
+    try {
+      const response = await api.get(API_ENDPOINTS.EMPLOYEES.GET_PROFILE);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in getProfile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update employee profile (for logged-in employee)
+   * @param {Object} profileData - Updated profile data
+   * @returns {Promise<Object>} Updated employee profile
+   */
+  async updateProfile(profileData) {
+    try {
+      const response = await api.put(
+        API_ENDPOINTS.EMPLOYEES.UPDATE_PROFILE,
+        profileData
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in updateProfile:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get list of employees
    * @param {Object} params - Query parameters (page, limit)
    * @returns {Promise<Object>} List of employees with pagination
