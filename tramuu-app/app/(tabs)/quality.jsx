@@ -6,7 +6,8 @@ import {
   EllipsisVertical,
   FileText,
   History,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import {
@@ -19,10 +20,12 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
 import KeyboardAwareWrapper from "@/components/KeyboardAwareWrapper";
 import { qualityService } from '@/services';
 
@@ -38,6 +41,8 @@ export default function Quality() {
   const [ufc, setUfc] = useState('');
   const [acidez, setAcidez] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [photoUri, setPhotoUri] = useState(null);
+  const [photoBase64, setPhotoBase64] = useState(null);
 
   // Backend integration states
   const [loading, setLoading] = useState(false);
@@ -90,6 +95,8 @@ export default function Quality() {
     setObservaciones('');
     setSelectedSample('');
     setSelectedCows('');
+    setPhotoUri(null);
+    setPhotoBase64(null);
   };
 
   const Tab = ({ id, title, icon: Icon, isSelected, onPress, hasNotification }) => (
@@ -172,11 +179,65 @@ export default function Quality() {
     );
   };
 
-  const handleCapturePhoto = () => {
-    Alert.alert(
-      "Capturar Foto",
-      "Funcionalidad de cámara en desarrollo"
-    );
+  const handleCapturePhoto = async () => {
+    try {
+      // Request camera permissions
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permisos necesarios',
+          'Se necesitan permisos de cámara para tomar fotos del ensayo'
+        );
+        return;
+      }
+
+      // Show options: Camera or Gallery
+      Alert.alert(
+        'Foto del Ensayo',
+        'Selecciona una opción',
+        [
+          {
+            text: 'Tomar Foto',
+            onPress: async () => {
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setPhotoUri(result.assets[0].uri);
+                setPhotoBase64(result.assets[0].base64);
+              }
+            }
+          },
+          {
+            text: 'Elegir de Galería',
+            onPress: async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                setPhotoUri(result.assets[0].uri);
+                setPhotoBase64(result.assets[0].base64);
+              }
+            }
+          },
+          { text: 'Cancelar', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Error capturing photo:', error);
+      Alert.alert('Error', 'No se pudo capturar la foto');
+    }
   };
 
   const handleSaveDraft = () => {
@@ -203,7 +264,8 @@ export default function Quality() {
         ufc: parseInt(ufc),
         acidity: parseFloat(acidez),
         notes: observaciones.trim() || undefined,
-        date: new Date().toISOString(),
+        photo: photoBase64 ? `data:image/jpeg;base64,${photoBase64}` : undefined,
+        date: new Date().toISOString().split('T')[0],
       };
 
       await qualityService.createQualityTest(qualityData);
@@ -314,17 +376,42 @@ export default function Quality() {
 
       {/* Photo Section */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Foto del Ensayo</Text>
-        <TouchableOpacity style={styles.photoContainer} onPress={handleCapturePhoto}>
-          <View style={styles.photoPlaceholder}>
-            <Camera size={40} color="#9CA3AF" />
-            <Text style={styles.photoText}>Tomar foto del ensayo</Text>
-            <View style={styles.captureButton}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Foto del Ensayo</Text>
+          {photoUri && (
+            <TouchableOpacity onPress={() => {
+              setPhotoUri(null);
+              setPhotoBase64(null);
+            }}>
+              <X size={20} color="#EF4444" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {photoUri ? (
+          <TouchableOpacity style={styles.photoContainer} onPress={handleCapturePhoto}>
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.photoImage}
+              resizeMode="cover"
+            />
+            <View style={styles.changePhotoButton}>
               <Camera size={16} color="#FFFFFF" />
-              <Text style={styles.captureButtonText}>Capturar</Text>
+              <Text style={styles.changePhotoButtonText}>Cambiar Foto</Text>
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.photoContainer} onPress={handleCapturePhoto}>
+            <View style={styles.photoPlaceholder}>
+              <Camera size={40} color="#9CA3AF" />
+              <Text style={styles.photoText}>Tomar foto del ensayo</Text>
+              <View style={styles.captureButton}>
+                <Camera size={16} color="#FFFFFF" />
+                <Text style={styles.captureButtonText}>Capturar</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Observations */}
@@ -769,6 +856,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 12,
   },
+  photoImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+  },
   captureButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -778,6 +870,22 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   captureButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    marginLeft: 6,
+  },
+  changePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(96, 165, 250, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  changePhotoButtonText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#FFFFFF',
