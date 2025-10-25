@@ -61,10 +61,19 @@ export default function Quality() {
   const loadTests = async () => {
     try {
       setLoading(true);
+      console.log('📋 Cargando pruebas de calidad...');
       const data = await qualityService.getQualityTests({ limit: 20 });
-      setTests(data.tests || data || []);
+      console.log('📋 Datos recibidos:', data);
+      const testsArray = data.tests || data || [];
+      console.log('📋 Pruebas procesadas:', testsArray.length);
+      setTests(testsArray);
     } catch (error) {
-      console.error('Error loading quality tests:', error);
+      console.error('❌ Error loading quality tests:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       Alert.alert('Error', 'No se pudieron cargar las pruebas de calidad');
     } finally {
       setLoading(false);
@@ -75,10 +84,17 @@ export default function Quality() {
   const loadStatistics = async () => {
     try {
       setLoading(true);
+      console.log('📊 Cargando estadísticas de calidad...');
       const data = await qualityService.getStatistics();
+      console.log('📊 Estadísticas recibidas:', data);
       setStatistics(data);
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      console.error('❌ Error loading statistics:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       Alert.alert('Error', 'No se pudieron cargar las estadísticas');
     } finally {
       setLoading(false);
@@ -181,8 +197,11 @@ export default function Quality() {
 
   const handleCapturePhoto = async () => {
     try {
+      console.log('📸 Solicitando permisos de cámara...');
       // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      console.log('📸 Estado de permisos:', status);
 
       if (status !== 'granted') {
         Alert.alert(
@@ -200,34 +219,52 @@ export default function Quality() {
           {
             text: 'Tomar Foto',
             onPress: async () => {
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.7,
-                base64: true,
-              });
+              try {
+                console.log('📸 Abriendo cámara...');
+                const result = await ImagePicker.launchCameraAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  aspect: [4, 3],
+                  quality: 0.7,
+                  base64: true,
+                });
 
-              if (!result.canceled && result.assets[0]) {
-                setPhotoUri(result.assets[0].uri);
-                setPhotoBase64(result.assets[0].base64);
+                console.log('📸 Resultado de cámara:', result.canceled ? 'Cancelado' : 'Foto capturada');
+
+                if (!result.canceled && result.assets[0]) {
+                  console.log('📸 Foto guardada, tamaño base64:', result.assets[0].base64?.length || 0);
+                  setPhotoUri(result.assets[0].uri);
+                  setPhotoBase64(result.assets[0].base64);
+                }
+              } catch (camError) {
+                console.error('❌ Error al abrir cámara:', camError);
+                Alert.alert('Error', 'No se pudo abrir la cámara');
               }
             }
           },
           {
             text: 'Elegir de Galería',
             onPress: async () => {
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.7,
-                base64: true,
-              });
+              try {
+                console.log('📸 Abriendo galería...');
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  aspect: [4, 3],
+                  quality: 0.7,
+                  base64: true,
+                });
 
-              if (!result.canceled && result.assets[0]) {
-                setPhotoUri(result.assets[0].uri);
-                setPhotoBase64(result.assets[0].base64);
+                console.log('📸 Resultado de galería:', result.canceled ? 'Cancelado' : 'Foto seleccionada');
+
+                if (!result.canceled && result.assets[0]) {
+                  console.log('📸 Foto guardada, tamaño base64:', result.assets[0].base64?.length || 0);
+                  setPhotoUri(result.assets[0].uri);
+                  setPhotoBase64(result.assets[0].base64);
+                }
+              } catch (galError) {
+                console.error('❌ Error al abrir galería:', galError);
+                Alert.alert('Error', 'No se pudo abrir la galería');
               }
             }
           },
@@ -235,7 +272,7 @@ export default function Quality() {
         ]
       );
     } catch (error) {
-      console.error('Error capturing photo:', error);
+      console.error('❌ Error capturing photo:', error);
       Alert.alert('Error', 'No se pudo capturar la foto');
     }
   };
@@ -255,20 +292,39 @@ export default function Quality() {
         return;
       }
 
+      // Validate numeric values
+      const fatValue = parseFloat(grasa);
+      const proteinValue = parseFloat(proteina);
+      const lactoseValue = parseFloat(lactosa);
+      const ufcValue = parseInt(ufc);
+      const acidityValue = parseFloat(acidez);
+
+      if (isNaN(fatValue) || isNaN(proteinValue) || isNaN(lactoseValue) || isNaN(ufcValue) || isNaN(acidityValue)) {
+        Alert.alert('Error', 'Por favor ingresa valores numéricos válidos');
+        return;
+      }
+
       setLoading(true);
 
       const qualityData = {
-        fat: parseFloat(grasa),
-        protein: parseFloat(proteina),
-        lactose: parseFloat(lactosa),
-        ufc: parseInt(ufc),
-        acidity: parseFloat(acidez),
+        fat: fatValue,
+        protein: proteinValue,
+        lactose: lactoseValue,
+        ufc: ufcValue,
+        acidity: acidityValue,
         notes: observaciones.trim() || undefined,
         photo: photoBase64 ? `data:image/jpeg;base64,${photoBase64}` : undefined,
         date: new Date().toISOString().split('T')[0],
       };
 
-      await qualityService.createQualityTest(qualityData);
+      console.log('📊 Enviando datos de calidad:', {
+        ...qualityData,
+        photo: qualityData.photo ? `[Base64 Image - ${qualityData.photo.length} chars]` : 'Sin foto'
+      });
+
+      const response = await qualityService.createQualityTest(qualityData);
+
+      console.log('✅ Prueba de calidad creada:', response);
 
       Alert.alert(
         'Registro exitoso',
@@ -284,8 +340,18 @@ export default function Quality() {
         ]
       );
     } catch (error) {
-      console.error('Error registering quality test:', error);
-      Alert.alert('Error', error.message || 'Error al registrar la prueba de calidad');
+      console.error('❌ Error registering quality test:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      const errorMessage = error.response?.data?.message
+        || error.message
+        || 'Error al registrar la prueba de calidad';
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
