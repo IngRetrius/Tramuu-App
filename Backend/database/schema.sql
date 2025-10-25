@@ -104,8 +104,11 @@ CREATE TABLE quality_tests (
   test_id VARCHAR(50) NOT NULL,
   fat_percentage DECIMAL(5, 2),
   protein_percentage DECIMAL(5, 2),
+  lactose_percentage DECIMAL(5, 2),
   ufc INTEGER,
+  acidity DECIMAL(4, 2),
   observations TEXT,
+  photo_url TEXT,
   test_date DATE NOT NULL,
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(company_id, test_id)
