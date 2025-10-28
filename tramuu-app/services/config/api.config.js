@@ -10,20 +10,22 @@ import { Platform } from 'react-native';
 // For React Native, we need to use a local IP or production URL
 // Localhost won't work on physical devices or iOS simulators
 
-// Use localhost for web, IP/tunnel for mobile
+// Get API URL from environment or use defaults
 const getApiUrl = () => {
-  // If explicitly set in environment, use that
+  // Priority 1: Always use EXPO_PUBLIC_API_URL if set (RECOMMENDED)
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  // For web development, use localhost
-  if (Platform.OS === 'web') {
-    return 'http://localhost:3000/api';
-  }
-
-  // For mobile, use local IP (default)
-  return 'http://192.168.1.23:3000/api';
+  // Priority 2: Fallback to localhost (only for local development without .env)
+  console.warn(
+    '⚠️ WARNING: No EXPO_PUBLIC_API_URL configured!\n' +
+    'The app will try to connect to localhost, which may NOT work on all platforms.\n' +
+    'Please set EXPO_PUBLIC_API_URL in your .env file.\n' +
+    'For production: EXPO_PUBLIC_API_URL=https://tramuu-backend.onrender.com/api\n' +
+    'For local dev: EXPO_PUBLIC_API_URL=http://YOUR_IP:3000/api'
+  );
+  return 'http://localhost:3000/api';
 };
 
 const API_URL = getApiUrl();

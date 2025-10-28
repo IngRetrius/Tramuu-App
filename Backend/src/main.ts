@@ -11,9 +11,17 @@ async function bootstrap() {
   app.setGlobalPrefix(apiPrefix);
 
   // CORS configuration
+  // Allow all origins in production for mobile app to work from any network
+  const corsOrigin = process.env.CORS_ORIGIN
+    ? (process.env.CORS_ORIGIN === '*' ? '*' : process.env.CORS_ORIGIN.split(','))
+    : '*';
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
+    origin: corsOrigin,
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization',
+    exposedHeaders: 'Authorization',
   });
 
   // Global validation pipe

@@ -30,6 +30,26 @@ Aplicación móvil multiplataforma (iOS y Android) que permite a productores lec
 
 ## Instalación
 
+### Instalación Rápida (Recomendado)
+
+```bash
+# 1. Ir al directorio del frontend
+cd tramuu-app
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar entorno automáticamente
+npm run setup
+
+# 4. Iniciar la aplicación
+npm start
+```
+
+El script `npm run setup` te guiará para configurar la URL del backend automáticamente.
+
+### Instalación Manual
+
 1. Ir al directorio del frontend:
 
 ```bash
@@ -44,7 +64,13 @@ npm install
 
 3. Configurar variables de entorno:
 
-Crear un archivo `.env` en la raíz del proyecto:
+Copiar el archivo de ejemplo y editarlo:
+
+```bash
+cp .env.example .env
+```
+
+Editar `.env` según tu entorno (ver [SETUP.md](./SETUP.md) para más detalles):
 
 ```env
 # API Configuration
