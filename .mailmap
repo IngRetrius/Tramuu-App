@@ -1,0 +1,5 @@
+# .mailmap - Map contributor identities
+# Format: Proper Name <proper@email.com> <commit@email.com>
+
+# Map Claude's email to main author to consolidate contributions
+IngRetrius <121321574+IngRetrius@users.noreply.github.com> <noreply@anthropic.com>
