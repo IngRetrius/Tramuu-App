@@ -42,6 +42,16 @@ export class AuthController {
   }
 
   @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refrescar access token' })
+  @SwaggerResponse({ status: 200, description: 'Token refrescado exitosamente' })
+  @SwaggerResponse({ status: 401, description: 'Refresh token inválido o expirado' })
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshAccessToken(refreshToken);
+  }
+
+  @Public()
   @Get('verify-code/:code')
   @ApiOperation({ summary: 'Verificar código de invitación' })
   @SwaggerResponse({ status: 200, description: 'Código válido' })

@@ -54,7 +54,20 @@ export class InventoryService {
 
     if (error) throw new BadRequestException('Error al obtener inventario');
 
-    return items || [];
+    // Transform to camelCase for frontend
+    return (items || []).map(item => ({
+      id: item.id,
+      batchId: item.batch_id,
+      quantity: item.quantity,
+      category: item.category,
+      status: item.status,
+      milkingId: item.milking_id,
+      location: item.location,
+      notes: item.notes,
+      createdBy: item.created_by,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
   }
 
   async findOne(id: string, companyId: string) {
@@ -116,23 +129,21 @@ export class InventoryService {
 
     if (!items || items.length === 0) {
       return {
-        totalLiters: 0,
-        coldLiters: 0,
-        hotLiters: 0,
-        byCategory: {
-          FRESH_MILK: 0,
-          PROCESSING: 0,
-          STORED: 0,
-        },
+        totalQuantity: 0,
+        coldQuantity: 0,
+        hotQuantity: 0,
+        freshMilk: 0,
+        processing: 0,
+        stored: 0,
         lowStockItems: [],
       };
     }
 
-    const totalLiters = items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
-    const coldLiters = items
+    const totalQuantity = items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
+    const coldQuantity = items
       .filter((item) => item.status === 'COLD')
       .reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
-    const hotLiters = items
+    const hotQuantity = items
       .filter((item) => item.status === 'HOT')
       .reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
 
@@ -153,10 +164,12 @@ export class InventoryService {
       }));
 
     return {
-      totalLiters: Math.round(totalLiters),
-      coldLiters: Math.round(coldLiters),
-      hotLiters: Math.round(hotLiters),
-      byCategory,
+      totalQuantity: Math.round(totalQuantity),
+      coldQuantity: Math.round(coldQuantity),
+      hotQuantity: Math.round(hotQuantity),
+      freshMilk: Math.round(byCategory.FRESH_MILK || 0),
+      processing: Math.round(byCategory.PROCESSING || 0),
+      stored: Math.round(byCategory.STORED || 0),
       lowStockItems,
     };
   }
@@ -234,6 +247,18 @@ export class InventoryService {
 
     if (error) throw new BadRequestException('Error al obtener movimientos');
 
-    return movements || [];
+    // Transform to camelCase for frontend
+    return (movements || []).map(movement => ({
+      id: movement.id,
+      inventoryItemId: movement.inventory_item_id,
+      type: movement.type,
+      quantity: movement.quantity,
+      reason: movement.reason,
+      notes: movement.notes,
+      createdBy: movement.created_by,
+      createdAt: movement.created_at,
+      inventory: movement.inventory,
+      employees: movement.employees,
+    }));
   }
 }

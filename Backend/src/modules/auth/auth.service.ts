@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { SupabaseService } from '@database/supabase.service';
 import { RegisterCompanyDto } from './dto/register-company.dto';
@@ -13,6 +14,7 @@ export class AuthService {
   constructor(
     private supabaseService: SupabaseService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async registerCompany(dto: RegisterCompanyDto) {
@@ -83,12 +85,15 @@ export class AuthService {
       throw new BadRequestException(`Error al crear empresa: ${companyError.message}`);
     }
 
-    const accessToken = this.generateToken({
+    const tokenPayload = {
       sub: user.id,
       email: user.email,
-      userType: 'company',
+      userType: 'company' as const,
       companyId: company.id,
-    });
+    };
+
+    const accessToken = this.generateToken(tokenPayload);
+    const refreshToken = this.generateRefreshToken(tokenPayload);
 
     return {
       user: {
@@ -105,6 +110,7 @@ export class AuthService {
         invitationCode: company.invitation_code,
       },
       accessToken,
+      refreshToken,
     };
   }
 
@@ -170,13 +176,16 @@ export class AuthService {
       throw new BadRequestException(`Error al crear empleado: ${employeeError.message}`);
     }
 
-    const accessToken = this.generateToken({
+    const tokenPayload = {
       sub: user.id,
       email: user.email,
-      userType: 'employee',
+      userType: 'employee' as const,
       companyId: company.id,
       employeeId: employee.id,
-    });
+    };
+
+    const accessToken = this.generateToken(tokenPayload);
+    const refreshToken = this.generateRefreshToken(tokenPayload);
 
     return {
       user: {
@@ -191,6 +200,7 @@ export class AuthService {
         companyId: company.id,
       },
       accessToken,
+      refreshToken,
     };
   }
 
@@ -251,13 +261,16 @@ export class AuthService {
       };
     }
 
-    const accessToken = this.generateToken({
+    const tokenPayload = {
       sub: user.id,
       email: user.email,
       userType: user.user_type as 'company' | 'employee',
       companyId: additionalData['companyId'],
       employeeId: additionalData['employeeId'],
-    });
+    };
+
+    const accessToken = this.generateToken(tokenPayload);
+    const refreshToken = this.generateRefreshToken(tokenPayload);
 
     return {
       user: {
@@ -267,6 +280,7 @@ export class AuthService {
       },
       ...additionalData,
       accessToken,
+      refreshToken,
     };
   }
 
@@ -294,6 +308,84 @@ export class AuthService {
 
   private generateToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload);
+  }
+
+  private generateRefreshToken(payload: JwtPayload): string {
+    return this.jwtService.sign(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '30d',
+    });
+  }
+
+  async refreshAccessToken(refreshToken: string) {
+    try {
+      // Verify refresh token
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const supabase = this.supabaseService.getClient();
+
+      // Get user
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', payload.sub)
+        .single();
+
+      if (error || !user || !user.is_active) {
+        throw new UnauthorizedException('Usuario no encontrado o inactivo');
+      }
+
+      // Get additional data based on user type
+      let additionalPayload = {};
+
+      if (user.user_type === 'company') {
+        const { data: company } = await supabase
+          .from('companies')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        additionalPayload = {
+          companyId: company?.id,
+        };
+      } else if (user.user_type === 'employee') {
+        const { data: employee } = await supabase
+          .from('employees')
+          .select('id, company_id, is_active')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!employee?.is_active) {
+          throw new UnauthorizedException('Empleado inactivo');
+        }
+
+        additionalPayload = {
+          companyId: employee?.company_id,
+          employeeId: employee?.id,
+        };
+      }
+
+      // Generate new access token
+      const newAccessToken = this.generateToken({
+        sub: user.id,
+        email: user.email,
+        userType: user.user_type as 'company' | 'employee',
+        ...additionalPayload,
+      });
+
+      return {
+        accessToken: newAccessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          userType: user.user_type,
+        },
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Refresh token inválido o expirado');
+    }
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
