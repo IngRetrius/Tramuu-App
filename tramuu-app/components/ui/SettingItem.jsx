@@ -7,13 +7,15 @@ export default function SettingItem({
   icon: Icon, 
   onPress, 
   hasChevron = true, 
-  rightComponent 
+  rightComponent,
+  iconColor = '#60A5FA',
+  iconBackgroundColor = '#EBF4FF'
 }) {
   return (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       <View style={styles.settingLeft}>
-        <View style={styles.settingIconContainer}>
-          <Icon size={20} color="#60A5FA" />
+        <View style={[styles.settingIconContainer, { backgroundColor: iconBackgroundColor }]}>
+          <Icon size={20} color={iconColor} />
         </View>
         <View style={styles.settingContent}>
           <Text style={styles.settingTitle}>{title}</Text>

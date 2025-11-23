@@ -19,11 +19,12 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Alert
+  Alert,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import KeyboardAwareWrapper from '@/components/KeyboardAwareWrapper';
 import CowSelector from '@/components/milking/CowSelector';
 import { milkingsService } from '@/services';
 
@@ -238,12 +239,16 @@ export default function MilkingRecord() {
 
   return (
     <SafeAreaView style={styles.container} edges={["right", "left"]}>
-      <KeyboardAwareWrapper keyboardVerticalOffset={100}>
-        <Stack.Screen
-          options={{
-            title: "Registro de Ordeño",
-          }}
-        />
+      <Stack.Screen
+        options={{
+          title: "Registro de Ordeño",
+        }}
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         {/* Decorative Background Elements */}
         <View style={styles.backgroundContainer}>
           <Svg
@@ -261,7 +266,11 @@ export default function MilkingRecord() {
           </Svg>
         </View>
 
-        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Type Selection Tabs */}
           <View style={styles.typeContainer}>
             <View style={styles.typeTabsContainer}>
@@ -339,7 +348,7 @@ export default function MilkingRecord() {
                 >
                   <User size={20} color="#6B7280" />
                   <Text style={[styles.selectCowText, selectedCow && styles.selectCowTextSelected]}>
-                    {selectedCow ? `${selectedCow.tag || selectedCow.id} - ${selectedCow.breed}` : 'Seleccionar vaca'}
+                    {selectedCow ? `${selectedCow.cow_id || selectedCow.id}${selectedCow.name ? ` - ${selectedCow.name}` : ''} (${selectedCow.breed})` : 'Seleccionar vaca'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -375,7 +384,9 @@ export default function MilkingRecord() {
                   {massiveCows.map((cow) => (
                     <View key={cow.id} style={styles.massiveCowItem}>
                       <View style={styles.massiveCowInfo}>
-                        <Text style={styles.massiveCowId}>{cow.tag || cow.id}</Text>
+                        <Text style={styles.massiveCowId}>
+                          {cow.cow_id || cow.id}{cow.name ? ` - ${cow.name}` : ''}
+                        </Text>
                         <Text style={styles.massiveCowBreed}>{cow.breed}</Text>
                       </View>
                       <View style={styles.massiveCowInput}>
@@ -445,7 +456,7 @@ export default function MilkingRecord() {
           selectedCows={selectedType === 'massive' ? massiveCows : (selectedCow ? [selectedCow] : [])}
           multiSelect={selectedType === 'massive'}
         />
-      </KeyboardAwareWrapper>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -591,6 +602,87 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B7280',
     marginLeft: 8,
+  },
+  selectCowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  selectCowText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#9CA3AF',
+  },
+  selectCowTextSelected: {
+    color: '#111827',
+  },
+  addCowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#60A5FA',
+    borderRadius: 12,
+    paddingVertical: 16,
+  },
+  addCowButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  massiveCowsList: {
+    marginTop: 12,
+  },
+  massiveCowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  massiveCowInfo: {
+    flex: 1,
+  },
+  massiveCowId: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  massiveCowBreed: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  massiveCowInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  massiveCowLitersInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    minWidth: 80,
+    textAlign: 'center',
+  },
+  massiveCowLitersSuffix: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  removeCowButton: {
+    padding: 8,
   },
   registerButton: {
     flexDirection: 'row',

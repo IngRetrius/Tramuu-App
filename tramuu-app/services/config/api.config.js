@@ -3,7 +3,6 @@
  * Centralized configuration for API endpoints and settings
  */
 
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Get API URL from environment variables
@@ -131,6 +130,7 @@ export const API_ENDPOINTS = {
     GET_BY_ID: (id) => `/employees/${id}`,
     UPDATE: (id) => `/employees/${id}`,
     DELETE: (id) => `/employees/${id}`,
+    TOGGLE_STATUS: (id) => `/employees/${id}/toggle-status`,
   },
 
   // Companies endpoints

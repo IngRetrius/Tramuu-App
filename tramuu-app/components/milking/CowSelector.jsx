@@ -13,8 +13,11 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  Dimensions
+  Dimensions,
+  Platform,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Check, X } from 'lucide-react-native';
 import { cowsService } from '@/services';
 
@@ -28,8 +31,12 @@ export default function CowSelector({ visible, onClose, onSelect, selectedCows =
 
   useEffect(() => {
     if (visible) {
-      loadCows();
+      console.log('🔵 CowSelector Modal abierto');
       setSelected(selectedCows);
+      loadCows();
+    } else {
+      // Reset search when modal closes
+      setSearchText('');
     }
   }, [visible]);
 
@@ -37,9 +44,13 @@ export default function CowSelector({ visible, onClose, onSelect, selectedCows =
     try {
       setLoading(true);
       const data = await cowsService.getCows({ search: searchText });
-      setCows(data.cows || data || []);
+      const cowsList = data.cows || data || [];
+      console.log('📋 CowSelector - Vacas cargadas:', cowsList.length);
+      console.log('📋 CowSelector - Datos:', cowsList.slice(0, 2)); // Log primeras 2 vacas
+      setCows(cowsList);
     } catch (error) {
-      console.error('Error loading cows:', error);
+      console.error('❌ Error loading cows:', error);
+      setCows([]); // Asegurar que cows sea un array vacío en caso de error
     } finally {
       setLoading(false);
     }
@@ -76,7 +87,9 @@ export default function CowSelector({ visible, onClose, onSelect, selectedCows =
         onPress={() => toggleCowSelection(cow)}
       >
         <View style={styles.cowInfo}>
-          <Text style={styles.cowId}>{cow.tag || cow.id}</Text>
+          <Text style={styles.cowId}>
+            {cow.cow_id || cow.id}{cow.name ? ` - ${cow.name}` : ''}
+          </Text>
           <Text style={styles.cowBreed}>{cow.breed}</Text>
         </View>
         {selected && (
@@ -116,6 +129,7 @@ export default function CowSelector({ visible, onClose, onSelect, selectedCows =
               value={searchText}
               onChangeText={setSearchText}
               onSubmitEditing={loadCows}
+              returnKeyType="search"
             />
           </View>
 
@@ -132,20 +146,40 @@ export default function CowSelector({ visible, onClose, onSelect, selectedCows =
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#60A5FA" />
+              <Text style={styles.loadingText}>Cargando vacas...</Text>
             </View>
           ) : (
-            <FlatList
-              data={cows}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => <CowItem cow={item} />}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={() => (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No se encontraron vacas</Text>
-                </View>
+            <>
+              {cows.length > 0 && (
+                <Text style={styles.countText}>
+                  {cows.length} {cows.length === 1 ? 'vaca disponible' : 'vacas disponibles'}
+                </Text>
               )}
-            />
+              <FlatList
+                data={cows}
+                keyExtractor={(item, index) => item.id?.toString() || `cow-${index}`}
+                renderItem={({ item }) => <CowItem cow={item} />}
+                style={styles.list}
+                contentContainerStyle={[
+                  styles.listContent,
+                  cows.length === 0 && { flex: 1, justifyContent: 'center' }
+                ]}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                removeClippedSubviews={false}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={10}
+                ListEmptyComponent={() => (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No se encontraron vacas</Text>
+                    <Text style={styles.emptySubtext}>
+                      Intenta agregar vacas desde la sección de Gestión
+                    </Text>
+                  </View>
+                )}
+              />
+            </>
           )}
 
           {/* Confirm Button */}
@@ -175,7 +209,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
+    minHeight: '50%',
     paddingTop: 20,
+    flexDirection: 'column',
   },
   header: {
     flexDirection: 'row',
@@ -226,11 +262,13 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+    flexGrow: 1,
   },
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 20,
+    flexGrow: 1,
   },
   cowItem: {
     flexDirection: 'row',
@@ -274,13 +312,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 60,
   },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  countText: {
+    fontSize: 14,
+    color: '#6B7280',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+    fontWeight: '500',
+  },
   emptyContainer: {
+    flex: 1,
     paddingVertical: 60,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
     color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
   confirmButton: {
     backgroundColor: '#60A5FA',

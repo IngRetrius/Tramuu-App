@@ -29,14 +29,32 @@ class AuthService {
         hasUser: !!responseData.user,
       });
 
-      const { accessToken, refreshToken, user } = responseData;
+      const { accessToken, refreshToken, user, company, employee } = responseData;
 
       if (!accessToken) {
         console.error('❌ No accessToken in login response!', response.data);
         throw new Error('No access token received from server');
       }
 
-      // Store tokens and user data
+      // Enrich user object with name from company or employee data
+      const enrichedUser = {
+        ...user,
+        name: company?.name || employee?.name || user.email,
+        phone: company?.phone || employee?.phone || null,
+        companyId: responseData.companyId,
+        employeeId: responseData.employeeId,
+        // Store full company/employee data for reference
+        companyData: company || null,
+        employeeData: employee || null,
+      };
+
+      console.log('👤 Enriched user data:', {
+        name: enrichedUser.name,
+        userType: enrichedUser.userType,
+        email: enrichedUser.email,
+      });
+
+      // Store tokens and enriched user data
       console.log('💾 Saving token to storage...');
       await tokenStorage.saveToken(accessToken);
       console.log('✅ Token saved successfully');
@@ -44,7 +62,7 @@ class AuthService {
       if (refreshToken) {
         await tokenStorage.saveRefreshToken(refreshToken);
       }
-      await tokenStorage.saveUser(user);
+      await tokenStorage.saveUser(enrichedUser);
 
       return responseData;
     } catch (error) {
@@ -73,14 +91,31 @@ class AuthService {
         hasUser: !!responseData.user,
       });
 
-      const { accessToken, refreshToken, user } = responseData;
+      const { accessToken, refreshToken, user, company, employee } = responseData;
 
       if (!accessToken) {
         console.error('❌ No accessToken in register response!', response.data);
         throw new Error('No access token received from server');
       }
 
-      // Store tokens and user data
+      // Enrich user object with name from company or employee data
+      const enrichedUser = {
+        ...user,
+        name: company?.name || employee?.name || user.email,
+        phone: company?.phone || employee?.phone || null,
+        companyId: responseData.companyId,
+        employeeId: responseData.employeeId,
+        companyData: company || null,
+        employeeData: employee || null,
+      };
+
+      console.log('👤 Enriched user data (register):', {
+        name: enrichedUser.name,
+        userType: enrichedUser.userType,
+        email: enrichedUser.email,
+      });
+
+      // Store tokens and enriched user data
       console.log('💾 Saving token to storage...');
       await tokenStorage.saveToken(accessToken);
       console.log('✅ Token saved successfully');
@@ -88,7 +123,7 @@ class AuthService {
       if (refreshToken) {
         await tokenStorage.saveRefreshToken(refreshToken);
       }
-      await tokenStorage.saveUser(user);
+      await tokenStorage.saveUser(enrichedUser);
 
       return responseData;
     } catch (error) {
@@ -112,14 +147,25 @@ class AuthService {
       // Backend wraps responses in { success, data, statusCode }
       const responseData = response.data.data || response.data;
 
-      const { accessToken, refreshToken, user } = responseData;
+      const { accessToken, refreshToken, user, company, employee } = responseData;
 
-      // Store tokens and user data
+      // Enrich user object with name from company or employee data
+      const enrichedUser = {
+        ...user,
+        name: company?.name || employee?.name || user.email,
+        phone: company?.phone || employee?.phone || null,
+        companyId: responseData.companyId,
+        employeeId: responseData.employeeId,
+        companyData: company || null,
+        employeeData: employee || null,
+      };
+
+      // Store tokens and enriched user data
       await tokenStorage.saveToken(accessToken);
       if (refreshToken) {
         await tokenStorage.saveRefreshToken(refreshToken);
       }
-      await tokenStorage.saveUser(user);
+      await tokenStorage.saveUser(enrichedUser);
 
       return responseData;
     } catch (error) {

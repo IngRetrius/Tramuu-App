@@ -15,8 +15,9 @@ class InventoryService {
   async getItems(params = {}) {
     try {
       const response = await api.get(API_ENDPOINTS.INVENTORY.LIST, { params });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getItems:', error);
       throw error;
     }
   }
@@ -29,8 +30,9 @@ class InventoryService {
   async getItemById(id) {
     try {
       const response = await api.get(API_ENDPOINTS.INVENTORY.GET_BY_ID(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getItemById:', error);
       throw error;
     }
   }
@@ -43,8 +45,9 @@ class InventoryService {
   async createItem(itemData) {
     try {
       const response = await api.post(API_ENDPOINTS.INVENTORY.CREATE, itemData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in createItem:', error);
       throw error;
     }
   }
@@ -58,8 +61,9 @@ class InventoryService {
   async updateItem(id, itemData) {
     try {
       const response = await api.put(API_ENDPOINTS.INVENTORY.UPDATE(id), itemData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateItem:', error);
       throw error;
     }
   }
@@ -72,8 +76,9 @@ class InventoryService {
   async deleteItem(id) {
     try {
       const response = await api.delete(API_ENDPOINTS.INVENTORY.DELETE(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in deleteItem:', error);
       throw error;
     }
   }
@@ -85,8 +90,9 @@ class InventoryService {
   async getStatistics() {
     try {
       const response = await api.get(API_ENDPOINTS.INVENTORY.STATISTICS);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getStatistics:', error);
       throw error;
     }
   }
@@ -100,8 +106,9 @@ class InventoryService {
     try {
       const params = inventoryItemId ? { inventoryItemId } : {};
       const response = await api.get(API_ENDPOINTS.INVENTORY.MOVEMENTS, { params });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getMovements:', error);
       throw error;
     }
   }
@@ -114,8 +121,9 @@ class InventoryService {
   async createMovement(movementData) {
     try {
       const response = await api.post(API_ENDPOINTS.INVENTORY.CREATE_MOVEMENT, movementData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in createMovement:', error);
       throw error;
     }
   }

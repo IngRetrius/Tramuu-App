@@ -1,7 +1,8 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   Bell,
   Lock,
+  LogOut,
   Mail,
   MapPin,
   MoreHorizontal,
@@ -12,7 +13,6 @@ import {
   Trash2,
   User,
   Users,
-  RefreshCw,
   Copy
 } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
@@ -32,10 +32,11 @@ import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import KeyboardAwareWrapper from '../KeyboardAwareWrapper';
 import { InputField, ProfilePhoto, SettingItem, Tab, ToggleSwitch } from '../ui';
-import { companiesService, employeesService } from '@/services';
+import { companiesService, employeesService, authService } from '@/services';
 import ChangePasswordModal from './ChangePasswordModal';
 
 export default function ConfigurationCompany() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('perfil'); // perfil, lecheros, configuracion
   const [companyName, setCompanyName] = useState('');
   const [companyNit, setCompanyNit] = useState('');
@@ -89,10 +90,20 @@ export default function ConfigurationCompany() {
     try {
       setLoading(true);
       const data = await employeesService.getEmployees();
-      setEmployees(data.employees || data || []);
+      
+      // Ensure employees is always an array
+      let employeesList = [];
+      if (Array.isArray(data)) {
+        employeesList = data;
+      } else if (data && Array.isArray(data.employees)) {
+        employeesList = data.employees;
+      }
+      
+      setEmployees(employeesList);
     } catch (error) {
       console.error('Error loading employees:', error);
       Alert.alert('Error', 'No se pudieron cargar los empleados');
+      setEmployees([]); // Set empty array on error
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -237,6 +248,33 @@ export default function ConfigurationCompany() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.logout();
+              router.replace('/login');
+            } catch (error) {
+              console.error('Error during logout:', error);
+              // Still navigate to login even if logout fails
+              router.replace('/login');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderPerfil = () => {
@@ -391,12 +429,12 @@ export default function ConfigurationCompany() {
         </View>
 
         {/* Lista de empleados */}
-        {employees.length === 0 ? (
+        {!Array.isArray(employees) || employees.length === 0 ? (
           <View style={styles.emptyState}>
             <Users size={48} color="#9CA3AF" />
             <Text style={styles.emptyTitle}>Sin empleados</Text>
             <Text style={styles.emptyText}>
-              Invita a tu primer empleado usando el botón "Invitar"
+              Invita a tu primer empleado usando el botón &quot;Invitar&quot;
             </Text>
           </View>
         ) : (
@@ -477,6 +515,18 @@ export default function ConfigurationCompany() {
           subtitle="Eliminar permanentemente tu cuenta"
           icon={Trash2}
           onPress={() => Alert.alert("Eliminar Cuenta", "Esta acción no se puede deshacer")}
+        />
+      </View>
+
+      {/* Cerrar Sesión */}
+      <View style={styles.card}>
+        <SettingItem
+          title="Cerrar Sesión"
+          subtitle="Salir de tu cuenta"
+          icon={LogOut}
+          onPress={handleLogout}
+          iconColor="#EF4444"
+          iconBackgroundColor="#FEE2E2"
         />
       </View>
 

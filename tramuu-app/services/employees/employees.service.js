@@ -47,8 +47,10 @@ class EmployeesService {
   async getEmployees(params = {}) {
     try {
       const response = await api.get(API_ENDPOINTS.EMPLOYEES.LIST, { params });
-      return response.data;
+      // Backend wraps in { success, data, statusCode }
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getEmployees:', error);
       throw error;
     }
   }
@@ -61,8 +63,9 @@ class EmployeesService {
   async getEmployeeById(id) {
     try {
       const response = await api.get(API_ENDPOINTS.EMPLOYEES.GET_BY_ID(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getEmployeeById:', error);
       throw error;
     }
   }
@@ -78,8 +81,9 @@ class EmployeesService {
         API_ENDPOINTS.EMPLOYEES.CREATE,
         employeeData
       );
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in createEmployee:', error);
       throw error;
     }
   }
@@ -96,8 +100,9 @@ class EmployeesService {
         API_ENDPOINTS.EMPLOYEES.UPDATE(id),
         employeeData
       );
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateEmployee:', error);
       throw error;
     }
   }
@@ -110,8 +115,24 @@ class EmployeesService {
   async deleteEmployee(id) {
     try {
       const response = await api.delete(API_ENDPOINTS.EMPLOYEES.DELETE(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in deleteEmployee:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Toggle employee status (active/inactive)
+   * @param {string} id - Employee ID
+   * @returns {Promise<Object>} Updated employee
+   */
+  async toggleStatus(id) {
+    try {
+      const response = await api.patch(API_ENDPOINTS.EMPLOYEES.TOGGLE_STATUS(id));
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error in toggleStatus:', error);
       throw error;
     }
   }

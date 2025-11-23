@@ -15,8 +15,9 @@ class DeliveriesService {
   async getDeliveries(params = {}) {
     try {
       const response = await api.get(API_ENDPOINTS.DELIVERIES.LIST, { params });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getDeliveries:', error);
       throw error;
     }
   }
@@ -29,8 +30,9 @@ class DeliveriesService {
   async getDeliveryById(id) {
     try {
       const response = await api.get(API_ENDPOINTS.DELIVERIES.GET_BY_ID(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getDeliveryById:', error);
       throw error;
     }
   }
@@ -43,8 +45,9 @@ class DeliveriesService {
   async createDelivery(deliveryData) {
     try {
       const response = await api.post(API_ENDPOINTS.DELIVERIES.CREATE, deliveryData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in createDelivery:', error);
       throw error;
     }
   }
@@ -58,8 +61,9 @@ class DeliveriesService {
   async updateDelivery(id, deliveryData) {
     try {
       const response = await api.put(API_ENDPOINTS.DELIVERIES.UPDATE(id), deliveryData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateDelivery:', error);
       throw error;
     }
   }
@@ -73,8 +77,9 @@ class DeliveriesService {
   async updateStatus(id, status) {
     try {
       const response = await api.patch(API_ENDPOINTS.DELIVERIES.UPDATE_STATUS(id), { status });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateStatus:', error);
       throw error;
     }
   }
@@ -87,8 +92,9 @@ class DeliveriesService {
   async deleteDelivery(id) {
     try {
       const response = await api.delete(API_ENDPOINTS.DELIVERIES.DELETE(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in deleteDelivery:', error);
       throw error;
     }
   }
@@ -100,8 +106,9 @@ class DeliveriesService {
   async getStatistics() {
     try {
       const response = await api.get(API_ENDPOINTS.DELIVERIES.STATISTICS);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getStatistics:', error);
       throw error;
     }
   }

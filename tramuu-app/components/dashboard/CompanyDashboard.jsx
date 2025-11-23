@@ -1,30 +1,28 @@
+import { dashboardService } from '@/services';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   AlertTriangle,
-  Clock,
   Droplet,
   Star,
-  Thermometer,
   TrendingDown,
   TrendingUp,
   Truck,
   Users
 } from 'lucide-react-native';
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-  ActivityIndicator,
-  RefreshControl
+  View
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
-import { dashboardService } from '@/services';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -36,25 +34,25 @@ export default function CompanyDashboard() {
   const [chartTitle, setChartTitle] = useState('Producción Semanal');
   const [chartLoading, setChartLoading] = useState(false);
 
-  // Datos del dashboard (con valores por defecto)
+  // Datos del dashboard (valores iniciales limpios)
   const [dashboardData, setDashboardData] = useState({
     produccionHoy: {
       value: '0L',
-      change: '+0% vs ayer',
+      change: '0 AM / 0 PM',
       isPositive: true
     },
     calidadPromedio: {
-      value: '0%',
-      label: 'Cargando...',
+      value: '0L',
+      label: 'Por vaca',
       isPositive: true
     },
     entregasHoy: {
       value: '0',
-      pendientes: '0 pendientes'
+      pendientes: 'Esta semana'
     },
     lecherosActivos: {
       value: '0',
-      total: 'de 0 total'
+      total: 'vacas activas'
     }
   });
 
@@ -64,48 +62,53 @@ export default function CompanyDashboard() {
       const data = await dashboardService.getSummary();
       console.log('Dashboard data received:', data);
 
-      // Map backend data to frontend format
+      // Map backend data to frontend format with better null handling
+      const todayData = data.today || {};
+      const weekData = data.thisWeek || {};
+      
       setDashboardData({
         produccionHoy: {
-          value: `${data.today?.totalLiters || 0}L`,
-          change: `${data.today?.milkingsAM || 0} AM / ${data.today?.milkingsPM || 0} PM`,
+          value: `${todayData.totalLiters || 0}L`,
+          change: `${todayData.milkingsAM || 0} AM / ${todayData.milkingsPM || 0} PM`,
           isPositive: true
         },
         calidadPromedio: {
-          value: `${data.today?.avgPerCow || 0}L`,
+          value: `${todayData.avgPerCow ? todayData.avgPerCow.toFixed(1) : 0}L`,
           label: 'Por vaca',
           isPositive: true
         },
         entregasHoy: {
-          value: String(data.thisWeek?.totalLiters || 0),
+          value: String(weekData.totalLiters || 0),
           pendientes: 'Esta semana'
         },
         lecherosActivos: {
-          value: String(data.today?.activeCows || 0),
+          value: String(todayData.activeCows || 0),
           total: `vacas activas`
         }
       });
 
       // Update top cows if available
-      if (data.topProducers && data.topProducers.length > 0) {
-        const formattedCows = data.topProducers.map(cow => ({
-          id: cow.id,
-          name: cow.name || cow.cow_id || 'Sin nombre',
-          breed: 'Holstein', // Default breed
-          production: `${cow.daily_production || 0}L`,
+      if (data.topProducers && Array.isArray(data.topProducers) && data.topProducers.length > 0) {
+        const formattedCows = data.topProducers.map((cow, index) => ({
+          id: cow.id || index,
+          name: cow.name || cow.cow_id || `Vaca #${index + 1}`,
+          breed: cow.breed || 'Holstein',
+          production: `${cow.daily_production ? cow.daily_production.toFixed(1) : 0}L`,
           change: '+0%',
           isPositive: true
         }));
         setTopCows(formattedCows);
+      } else {
+        setTopCows([]); // Clear if no data
       }
 
       // Update chart data with REAL weekly production data
-      if (data.thisWeek && data.thisWeek.dailyProduction) {
-        const dailyData = data.thisWeek.dailyProduction;
+      if (weekData.dailyProduction && Array.isArray(weekData.dailyProduction)) {
+        const dailyData = weekData.dailyProduction;
 
         // Extract labels (day names) and values (total liters)
-        const labels = dailyData.map(day => day.dayName);
-        const values = dailyData.map(day => day.totalLiters);
+        const labels = dailyData.map(day => day.dayName || '');
+        const values = dailyData.map(day => day.totalLiters || 0);
 
         // Ensure all values are at least 1 (to avoid chart rendering issues)
         const safeChartValues = values.map(val => Math.max(val, 1));
@@ -127,7 +130,7 @@ export default function CompanyDashboard() {
           ]
         });
       } else {
-        // Fallback: use dummy data if dailyProduction is not available
+        // Fallback: use default data if dailyProduction is not available
         console.warn('No dailyProduction data available, using fallback');
         setChartData({
           labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
@@ -238,6 +241,7 @@ export default function CompanyDashboard() {
   // Load data on component mount
   useEffect(() => {
     loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reload production data when period changes
@@ -245,12 +249,14 @@ export default function CompanyDashboard() {
     if (!loading) {
       loadProductionByPeriod(selectedPeriod);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod]);
 
   // Reload data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadDashboardData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -260,26 +266,24 @@ export default function CompanyDashboard() {
     loadDashboardData();
   };
 
-  // Datos para el gráfico (solo con datos reales del backend)
+  // Datos para el gráfico (vacío hasta cargar del backend)
   const [chartData, setChartData] = useState({
-    labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+    labels: [],
     datasets: [
       {
-        data: [0, 0, 0, 0, 0, 0, 0],
+        data: [0], // Mínimo un valor para evitar error en el gráfico
         strokeWidth: 3,
         color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
       }
     ]
   });
 
-  // Top 5 vacas productoras (vacío por defecto, se llena con datos del backend)
+  // Top 5 vacas productoras (se llena con datos del backend)
   const [topCows, setTopCows] = useState([]);
 
-  // Alertas críticas (vacío por defecto, se llena con datos del backend)
-  const [criticalAlerts, setCriticalAlerts] = useState([]);
-
-  // Inventario de bodega (vacío por defecto, se llena con datos del backend)
-  const [inventory, setInventory] = useState([]);
+  // Nota: Alertas e Inventario se implementarán cuando el backend tenga endpoints disponibles
+  // const [criticalAlerts, setCriticalAlerts] = useState([]);
+  // const [inventory, setInventory] = useState([]);
 
   const MetricCard = ({ title, value, subtitle, icon: Icon, isPositive }) => (
     <View style={styles.metricCard}>
@@ -350,6 +354,8 @@ export default function CompanyDashboard() {
     </View>
   );
 
+  // Componentes AlertItem e InventoryItem comentados hasta implementar endpoints
+  /*
   const AlertItem = ({ alert }) => (
     <View style={styles.alertItem}>
       <View style={[styles.alertIcon]}>
@@ -378,6 +384,7 @@ export default function CompanyDashboard() {
       <Text style={styles.inventoryAmount}>{item.amount}</Text>
     </View>
   );
+  */
 
   return (
     <SafeAreaView style={styles.container} edges={["left", "right"]}>
@@ -462,7 +469,7 @@ export default function CompanyDashboard() {
         </View>
 
         {/* Gráfico de Producción */}
-        {!loading && chartData.datasets[0].data.length > 0 && (
+        {!loading && chartData.labels && chartData.labels.length > 0 && (
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <Text style={styles.chartTitle}>{chartTitle}</Text>
@@ -517,38 +524,62 @@ export default function CompanyDashboard() {
           </View>
         )}
 
-        {/* Top 5 Vacas Productoras */}
-        {topCows.length > 0 && (
+        {/* Mensaje cuando no hay datos de gráfico */}
+        {!loading && (!chartData.labels || chartData.labels.length === 0) && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Top 5 Vacas Productoras</Text>
-            <View style={styles.cowsList}>
-              {topCows.map((cow, index) => (
-                <CowRankingItem key={cow.id} cow={cow} index={index} />
-              ))}
+            <Text style={styles.cardTitle}>Producción por Período</Text>
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                No hay datos de producción disponibles
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Los gráficos aparecerán cuando haya registros de ordeño
+              </Text>
             </View>
           </View>
         )}
 
-        {/* Alertas Críticas */}
-        {criticalAlerts.length > 0 && (
+        {/* Top 5 Vacas Productoras */}
+        {!loading && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Top 5 Vacas Productoras</Text>
+            {topCows.length > 0 ? (
+              <View style={styles.cowsList}>
+                {topCows.map((cow, index) => (
+                  <CowRankingItem key={cow.id} cow={cow} index={index} />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateText}>
+                  No hay datos de vacas productoras disponibles
+                </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Los datos aparecerán cuando haya registros de ordeño
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Alertas Críticas - Ocultas hasta implementar endpoint */}
+        {/* TODO: Implementar cuando el backend tenga endpoint /dashboard/alerts */}
+        {false && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Alertas Críticas</Text>
             <View style={styles.alertsList}>
-              {criticalAlerts.map((alert) => (
-                <AlertItem key={alert.id} alert={alert} />
-              ))}
+              <Text style={styles.alertDescription}>No hay alertas disponibles</Text>
             </View>
           </View>
         )}
 
-        {/* Inventario Bodega */}
-        {inventory.length > 0 && (
+        {/* Inventario Bodega - Oculto hasta implementar endpoint */}
+        {/* TODO: Implementar cuando el backend tenga endpoint de inventario en dashboard */}
+        {false && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Inventario Bodega</Text>
             <View style={styles.inventoryList}>
-              {inventory.map((item) => (
-                <InventoryItem key={item.id} item={item} />
-              ))}
+              <Text style={styles.alertDescription}>No hay inventario disponible</Text>
             </View>
           </View>
         )}
@@ -897,5 +928,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  emptyStateContainer: {
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  emptyStateSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });

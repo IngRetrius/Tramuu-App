@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import CowCard from '@/components/management/CowCard';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import SwipeableCowCard from '@/components/management/SwipeableCowCard';
 import { Funnel, Plus, Search, AlertCircle } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { cowsService } from '@/services';
@@ -129,6 +131,44 @@ export default function Management() {
   };
 
   /**
+   * Handle cow deletion
+   * @param {string} cowId - ID of the cow to delete
+   */
+  const handleDeleteCow = async (cowId) => {
+    try {
+      // Show loading indicator
+      setLoading(true);
+
+      // Call backend to delete cow
+      await cowsService.deleteCow(cowId);
+
+      // Remove cow from local state immediately for better UX
+      setCowsData(prevCows => prevCows.filter(cow => cow.id !== cowId));
+
+      // Show success message
+      Alert.alert(
+        'Éxito',
+        'La vaca ha sido eliminada correctamente',
+        [{ text: 'OK' }]
+      );
+
+      // Reload cows to ensure sync with backend
+      await loadCows();
+    } catch (err) {
+      console.error('Error deleting cow:', err);
+      Alert.alert(
+        'Error',
+        'No se pudo eliminar la vaca. Por favor, intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+      // Reload cows to ensure data consistency
+      await loadCows();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Filter button component for breed and status filters
    */
   const FilterButton = ({ title, isSelected, onPress, color }) => (
@@ -149,9 +189,10 @@ export default function Management() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["right", "left"]}>
-      {/* Decorative Background Elements */}
-      <View style={styles.backgroundContainer}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container} edges={["right", "left"]}>
+        {/* Decorative Background Elements */}
+        <View style={styles.backgroundContainer}>
         <Svg
           style={styles.blob1}
           viewBox="0 0 220 652"
@@ -244,7 +285,11 @@ export default function Management() {
           </View>
         ) : (
           cowsData.map((cow) => (
-            <CowCard key={cow.id} cow={cow} />
+            <SwipeableCowCard
+              key={cow.id}
+              cow={cow}
+              onDelete={handleDeleteCow}
+            />
           ))
         )}
       </ScrollView>
@@ -256,7 +301,8 @@ export default function Management() {
       >
         <Plus color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 

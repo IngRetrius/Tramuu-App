@@ -1,23 +1,37 @@
+import { useUser } from "@/hooks/useUser";
 import { router } from "expo-router";
 import { Bell, CirclePlus, ClipboardPlus } from "lucide-react-native";
-import { View, Image, Text, StyleSheet, Dimensions, TouchableOpacity } from "react-native";
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function HeaderUser() {
+  const { user, isCompany, isEmployee } = useUser();
+
+  // Get display name
+  const displayName = user?.name || user?.email || "Usuario";
+  console.log("HeaderUser render - user:", user);
+  
+  // Get role text
+  const getRoleText = () => {
+    if (isCompany) return "Empresa";
+    if (isEmployee) return "Empleado";
+    return "Usuario";
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.headerContent}>
         <TouchableOpacity onPress={() => router.push("/configurationProfile")} style={styles.userInfo}>
           <Image
             source={{
-              uri: "https://api.builder.io/api/v1/image/assets/TEMP/40731bff813067c3d5adf5dc52c6259f237a5ef2?width=64",
+              uri: user?.profileImage || "https://api.builder.io/api/v1/image/assets/TEMP/40731bff813067c3d5adf5dc52c6259f237a5ef2?width=64",
             }}
             style={styles.avatar}
           />
           <View>
-            <Text style={styles.headerTitle}>Dashboard</Text>
-            <Text style={styles.headerSubtitle}>Lechero</Text>
+            <Text style={styles.headerTitle}>{displayName}</Text>
+            <Text style={styles.headerSubtitle}>{getRoleText()}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.headerActions}>

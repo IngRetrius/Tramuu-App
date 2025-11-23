@@ -1,21 +1,21 @@
 import KeyboardAwareWrapper from "@/components/KeyboardAwareWrapper";
+import { BackToButton, SimpleButton } from "@/components/ui";
+import { authService } from "@/services";
 import { router } from "expo-router";
-import { Lock, Mail, AlertCircle } from "lucide-react-native";
+import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react-native";
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { SimpleButton, BackToButton } from "@/components/ui";
-import { authService } from "@/services";
 
 export default function Login() {
   const [focusedInput, setFocusedInput] = useState(null);
@@ -23,6 +23,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     // Validation
@@ -151,7 +152,7 @@ export default function Login() {
                   placeholder="contraseña"
                   placeholderTextColor="#64748B"
                   style={styles.input}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
@@ -161,6 +162,16 @@ export default function Login() {
                   onBlur={() => setFocusedInput(null)}
                   editable={!loading}
                 />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color="#64748B" />
+                  ) : (
+                    <Eye size={20} color="#64748B" />
+                  )}
+                </TouchableOpacity>
               </View>
 
               {/* Forgot Password */}
@@ -272,7 +283,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     position: "relative",
     zIndex: 20,
-    minHeight: 400, // Añadir altura mínima
+    minHeight: 500, // Añadir altura mínima
   },
   loginTitle: {
     color: "black",
@@ -326,6 +337,9 @@ const styles = StyleSheet.create({
     color: "#222222ff",
     backgroundColor: "transparent",
     outlineStyle: "none",
+  },
+  eyeButton: {
+    padding: 4,
   },
   forgotPasswordContainer: {
     alignItems: "flex-end",

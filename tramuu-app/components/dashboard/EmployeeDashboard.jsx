@@ -1,6 +1,13 @@
+import { dashboardService } from "@/services";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import { Blocks, ChartLine, Droplet, User } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Dimensions,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -8,11 +15,68 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { Droplet, ChartLine, Syringe, TriangleAlert, Clock, Blocks, User } from "lucide-react-native";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function EmployeeDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Dashboard data state
+  const [dashboardData, setDashboardData] = useState({
+    totalMilkings: 0,
+    totalLiters: 0,
+    averagePerMilking: 0,
+  });
+
+  // Load dashboard data from backend
+  const loadDashboardData = async () => {
+    try {
+      setError(null);
+      const data = await dashboardService.getEmployeeSummary();
+      
+      console.log('Employee dashboard data received:', data);
+
+      // Calculate statistics
+      const totalMilkings = (data.today?.milkingsAM || 0) + (data.today?.milkingsPM || 0);
+      const totalLiters = data.today?.totalLiters || 0;
+      const averagePerMilking = totalMilkings > 0 ? (totalLiters / totalMilkings).toFixed(1) : 0;
+
+      setDashboardData({
+        totalMilkings,
+        totalLiters,
+        averagePerMilking,
+      });
+
+    } catch (err) {
+      console.error('Error loading employee dashboard:', err);
+      setError(err.message);
+      Alert.alert('Error', 'No se pudieron cargar los datos del dashboard');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
+
+  // Handle pull to refresh
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData();
+  };
+
   const handleNavigation = (route) => {
     router.push(`/(tabs)/${route}`);
   };
@@ -41,102 +105,91 @@ export default function EmployeeDashboard() {
         style={styles.scrollContainer}
         contentContainerStyle={styles.main}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {/* Resumen del Día */}
-        <View style={styles.summarySection}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Resumen del Día</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <View style={styles.statContent}>
-                  <View>
-                    <Text style={styles.statLabel}>Ordeños</Text>
-                    <Text style={styles.statValue}>24</Text>
+        {/* Loading State */}
+        {loading && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.loadingText}>Cargando datos...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Resumen del Día */}
+            <View style={styles.summarySection}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Resumen del Día</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.statCard}>
+                    <View style={styles.statContent}>
+                      <View>
+                        <Text style={styles.statLabel}>Ordeños</Text>
+                        <Text style={styles.statValue}>{dashboardData.totalMilkings}</Text>
+                      </View>
+                      <Droplet color={"#fff"} />
+                    </View>
                   </View>
-                  <Droplet color={"#fff"} />
+                  <View style={styles.statCard}>
+                    <View style={styles.statContent}>
+                      <View>
+                        <Text style={styles.statLabel}>Litros</Text>
+                        <Text style={styles.statValue}>{dashboardData.totalLiters}</Text>
+                      </View>
+                      <ChartLine color={"#fff"} />
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.averageCard}>
+                  <Text style={styles.averageText}>
+                    Promedio: {dashboardData.averagePerMilking}L por ordeño
+                  </Text>
                 </View>
               </View>
-              <View style={styles.statCard}>
-                <View style={styles.statContent}>
-                  <View>
-                    <Text style={styles.statLabel}>Litros</Text>
-                    <Text style={styles.statValue}>485</Text>
+            </View>
+
+            {/* Alertas - Ocultas hasta implementar endpoint */}
+            {/* TODO: Implementar cuando el backend tenga endpoint de alertas */}
+            {false && (
+              <View style={styles.alertsSection}>
+                <View style={styles.alertsHeader}>
+                  <Text style={styles.sectionTitle}>Alertas</Text>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>0</Text>
                   </View>
-                  <ChartLine color={"#fff"} />
+                </View>
+                <View style={styles.alertsList}>
+                  <Text style={styles.alertDescription}>No hay alertas disponibles</Text>
                 </View>
               </View>
-            </View>
-            <View style={styles.averageCard}>
-              <Text style={styles.averageText}>Promedio: 20.2L por ordeño</Text>
-            </View>
-          </View>
-        </View>
+            )}
 
-        {/* Alertas */}
-        <View style={styles.alertsSection}>
-          <View style={styles.alertsHeader}>
-            <Text style={styles.sectionTitle}>Alertas</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
-          </View>
-          <View style={styles.alertsList}>
-            <View style={styles.alertCard}>
-              <Syringe />
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>Vacuna Pendiente</Text>
-                <Text style={styles.alertDescription}>
-                  Vaca #127 - Vacuna antirrábica
-                </Text>
-                <Text style={styles.alertTime}>Vence en 2 días</Text>
+            {/* Accesos Rápidos */}
+            <View style={styles.quickAccessSection}>
+              <Text style={styles.sectionTitle}>Accesos Rápidos</Text>
+              <View style={styles.quickAccessGrid}>
+                <TouchableOpacity
+                  style={styles.quickAccessCard}
+                  onPress={() => handleNavigation("inventory")}
+                >
+                  <Blocks size={30} />
+                  <Text style={styles.quickAccessTitle}>Mi Inventario</Text>
+                  <Text style={styles.quickAccessDesc}>Gestionar recursos</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.quickAccessCard}
+                  onPress={() => router.push("/configurationProfile")}
+                >
+                  <User size={30} />
+                  <Text style={styles.quickAccessTitle}>Mi Perfil</Text>
+                  <Text style={styles.quickAccessDesc}>Configuración</Text>
+                </TouchableOpacity>
               </View>
             </View>
-
-            <View style={styles.alertCard}>
-              <TriangleAlert />
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>Atención Requerida</Text>
-                <Text style={styles.alertDescription}>
-                  Vaca #089 - Revisión veterinaria
-                </Text>
-                <Text style={styles.alertTime}>Programada para hoy</Text>
-              </View>
-            </View>
-
-            <View style={styles.alertCard}>
-              <Clock />
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>Próximo Ordeño</Text>
-                <Text style={styles.alertDescription}>Sector B - En 2 horas</Text>
-                <Text style={styles.alertTime}>15:30 PM</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Accesos Rápidos */}
-        <View style={styles.quickAccessSection}>
-          <Text style={styles.sectionTitle}>Accesos Rápidos</Text>
-          <View style={styles.quickAccessGrid}>
-            <TouchableOpacity
-              style={styles.quickAccessCard}
-              onPress={() => handleNavigation("inventory")}
-            >
-              <Blocks size={30} />
-              <Text style={styles.quickAccessTitle}>Mi Inventario</Text>
-              <Text style={styles.quickAccessDesc}>Gestionar recursos</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickAccessCard}
-              onPress={() => handleNavigation("profile")}
-            >
-              <User size={30} />
-              <Text style={styles.quickAccessTitle}>Mi Perfil</Text>
-              <Text style={styles.quickAccessDesc}>Configuración</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,6 +222,17 @@ const styles = {
   },
   main: {
     paddingHorizontal: Math.max(16, screenWidth * 0.035),
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
   },
   summarySection: {
     marginTop: Math.max(20, screenHeight * 0.025),

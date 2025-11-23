@@ -15,8 +15,9 @@ class QualityService {
   async getQualityTests(params = {}) {
     try {
       const response = await api.get(API_ENDPOINTS.QUALITY.LIST, { params });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getQualityTests:', error);
       throw error;
     }
   }
@@ -29,8 +30,9 @@ class QualityService {
   async getQualityTestById(id) {
     try {
       const response = await api.get(API_ENDPOINTS.QUALITY.GET_BY_ID(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getQualityTestById:', error);
       throw error;
     }
   }
@@ -43,8 +45,9 @@ class QualityService {
   async createQualityTest(qualityData) {
     try {
       const response = await api.post(API_ENDPOINTS.QUALITY.CREATE, qualityData);
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in createQualityTest:', error);
       throw error;
     }
   }
@@ -61,8 +64,9 @@ class QualityService {
         API_ENDPOINTS.QUALITY.UPDATE(id),
         qualityData
       );
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in updateQualityTest:', error);
       throw error;
     }
   }
@@ -75,8 +79,9 @@ class QualityService {
   async deleteQualityTest(id) {
     try {
       const response = await api.delete(API_ENDPOINTS.QUALITY.DELETE(id));
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in deleteQualityTest:', error);
       throw error;
     }
   }
@@ -91,8 +96,9 @@ class QualityService {
       const response = await api.get(API_ENDPOINTS.QUALITY.STATISTICS, {
         params,
       });
-      return response.data;
+      return response.data.data || response.data;
     } catch (error) {
+      console.error('Error in getStatistics:', error);
       throw error;
     }
   }

@@ -1,16 +1,15 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   Bell,
   Lock,
+  LogOut,
   Mail,
   Phone,
   Settings,
   Shield,
-  Trash2,
   User,
   Building2,
-  IdCard,
-  RefreshCw
+  IdCard
 } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import {
@@ -27,10 +26,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import KeyboardAwareWrapper from '../KeyboardAwareWrapper';
 import { InputField, ProfilePhoto, SettingItem, Tab, ToggleSwitch } from '../ui';
-import { employeesService } from '@/services';
+import { employeesService, authService } from '@/services';
 import ChangePasswordModal from './ChangePasswordModal';
 
 export default function ConfigurationEmployee() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('perfil');
   const [employeeName, setEmployeeName] = useState('');
   const [documentId, setDocumentId] = useState('');
@@ -98,6 +98,33 @@ export default function ConfigurationEmployee() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await authService.logout();
+              router.replace('/login');
+            } catch (error) {
+              console.error('Error during logout:', error);
+              // Still navigate to login even if logout fails
+              router.replace('/login');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderPerfil = () => {
@@ -249,6 +276,18 @@ export default function ConfigurationEmployee() {
           subtitle="Añade una capa extra de seguridad"
           icon={Shield}
           onPress={() => Alert.alert("2FA", "Funcionalidad en desarrollo")}
+        />
+      </View>
+
+      {/* Cerrar Sesión */}
+      <View style={styles.card}>
+        <SettingItem
+          title="Cerrar Sesión"
+          subtitle="Salir de tu cuenta"
+          icon={LogOut}
+          onPress={handleLogout}
+          iconColor="#EF4444"
+          iconBackgroundColor="#FEE2E2"
         />
       </View>
 
